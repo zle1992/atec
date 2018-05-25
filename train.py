@@ -56,6 +56,7 @@ def train(model_name, model):
             epochs=1,
             steps_per_epoch=int(y_train.shape[0] / config.batch_size),
             validation_data=(x_dev, y_dev),
+            class_weight={0: 1, 1: 4},
 
         )
         print('EVL')
