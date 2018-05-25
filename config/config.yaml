@@ -1,3 +1,0 @@
-{batch_size: 128, cache_dir: data/cache_dir2, model_dir: data/model_dir, number_classes: 2,
-  trainfile: '', vocab_size: 2552, w2v_content_word_model: data/train_w2v.model, w2v_vec_dim: 256,
-  word_embed_weight: data/word_embed_weight_.npy, word_maxlen: 20}

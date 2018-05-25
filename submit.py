@@ -34,7 +34,7 @@ def main(in_path, out_path):
     vocab, embed_weights = make_w2v(config.origin_csv)
     data = read_data(in_path)
     data.label = data.label.fillna(0)
-    X, _ = get_X_Y_from_df(data)
+    X, _ = get_X_Y_from_df(data,False)
     print('load model and predict')
     model = load_model(model_path, custom_objects={"softmax": softmax})
 
