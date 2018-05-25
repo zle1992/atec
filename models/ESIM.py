@@ -18,7 +18,7 @@ def create_pretrained_embedding(pretrained_weights_path, trainable=False, **kwar
     pretrained_weights = np.load(pretrained_weights_path)
     in_dim, out_dim = pretrained_weights.shape
     embedding = Embedding(in_dim, out_dim, weights=[
-                          pretrained_weights], trainable=False, **kwargs)
+                          pretrained_weights], trainable=True, **kwargs)
     return embedding
 
 
@@ -140,6 +140,8 @@ def decomposable_attention(pretrained_embedding=config.word_embed_weight,
     model = Model(inputs=[q1, q2], outputs=out_)
     model.compile(optimizer=Adam(lr=lr), loss='binary_crossentropy',
                   metrics=['accuracy'])
+    model.summary()
+
     return model
 
 
@@ -197,4 +199,5 @@ def esim(pretrained_embedding=config.word_embed_weight,
     model = Model(inputs=[q1, q2], outputs=out_)
     model.compile(optimizer=Adam(lr=1e-3),
                   loss='binary_crossentropy', metrics=['accuracy'])
+    model.summary()
     return model

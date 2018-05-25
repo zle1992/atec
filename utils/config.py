@@ -12,9 +12,10 @@ model_dir = '../model_dir'
 jieba_dict = 'data/jieba_dict.txt'
 origin_csv = 'data/atec_nlp_sim_train.csv'
 
+data_augment = True
+#data_augment = False
 
-
-cut_char_level = False
+#cut_char_level = False
 #最原始
 # word_embed_weight = 'data/word_embed_weight_.npy'
 # w2v_content_word_model = 'data/train_w2v.model'
@@ -33,3 +34,4 @@ cut_char_level = True
 word_embed_weight = 'data/word_embed_weight_char.npy'
 w2v_content_word_model = 'data/train_w2v_char.model'
 data_hdf = 'data/atec_nlp_sim_train_char.hdf'
+

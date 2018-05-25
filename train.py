@@ -40,13 +40,13 @@ from help import score, train_batch_generator, train_test, get_X_Y_from_df
 def train(model_name, model):
 
     path = config.origin_csv
-    #vocab, embed_weights = make_w2v(path)
     print('load data')
     data = read_hdf(path)
     train, dev = train_test(data)
-    x_train, y_train = get_X_Y_from_df(train)
-    x_dev, y_dev = get_X_Y_from_df(dev)
-
+    x_train, y_train = get_X_Y_from_df(train, config.data_augment)
+    x_dev, y_dev = get_X_Y_from_df(dev, False)
+    print('train shape', x_train[0].shape)
+    print('dev shape', x_dev[0].shape)
     for i in range(15):
         if i == 9:
             K.set_value(model.optimizer.lr, 0.0001)

@@ -37,7 +37,7 @@ def model_conv1D_(word_maxlen, emb_matrix):
         output_dim=emb_matrix.shape[1],
         weights=[emb_matrix],
         input_length=word_maxlen,
-        trainable=False
+        trainable=True
     )
 
     # 1D convolutions that can iterate over the word vectors
