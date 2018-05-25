@@ -40,7 +40,7 @@ from help import score, train_batch_generator, train_test, get_X_Y_from_df
 def train(model_name, model):
 
     path = config.origin_csv
-    vocab, embed_weights = make_w2v(path)
+    #vocab, embed_weights = make_w2v(path)
     print('load data')
     data = read_hdf(path)
     train, dev = train_test(data)

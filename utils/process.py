@@ -20,7 +20,10 @@ stopwords = ['?', ',', '。']
 
 def cut_single(x):
     res = []
-    setence_seged = jieba.cut(x.strip())
+    if config.cut_char_level:
+        setence_seged = list(x.strip())
+    else:
+        setence_seged = jieba.cut(x.strip())
     for word in setence_seged:
         if word not in stopwords:
             res.append(word)
@@ -74,7 +77,7 @@ def word2id(contents, word_voc):
 
 def read_cut(path):
 
-    data = pd.read_csv(path, sep='\\t',
+    data = pd.read_csv(path, sep='\t',encoding='utf8',
                        names=['id', 'q1', 'q2', 'label'])
     data['q1_cut'] = data['q1'].map(lambda x: cut_single(x))
     data['q2_cut'] = data['q2'].map(lambda x: cut_single(x))
