@@ -43,3 +43,4 @@ data_hdf = 'data/atec_nlp_sim_train.hdf'
 
 
 pre_train_w2v = 'data/pre_w2v/sgns.zhihu.word'
+word_embed_weight = 'data/word_embed_weight_char.npy'
