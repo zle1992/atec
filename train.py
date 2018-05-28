@@ -30,6 +30,7 @@ from keras.callbacks import Callback
 sys.path.append('models')
 from CNN import cnn_v1, cnn_v2, model_conv1D_
 from ESIM import esim, decomposable_attention
+from ABCNN import ABCNN
 sys.path.append('utils/')
 import config
 
@@ -56,10 +57,9 @@ def train(model_name, model):
             epochs=1,
             steps_per_epoch=int(y_train.shape[0] / config.batch_size),
             validation_data=(x_dev, y_dev),
-            class_weight={0: 1, 1: 4},
+            class_weight={0: 1, 1: 3},
 
         )
-        print('EVL')
         pred = model.predict(x_dev, batch_size=config.batch_size)
         pre, rec, f1 = score(y_dev, pred)
         model.save(config.model_dir + "/dp_embed_%s_%s.h5" %
@@ -88,6 +88,15 @@ def main(model_name):
 
     if model_name == 'dam':
         model = decomposable_attention()
+    if model_name == 'abcnn':
+
+        model = ABCNN(
+            left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=2,
+             nb_filter=300, filter_widths=[4,3],
+            collect_sentence_representations=True, abcnn_1=True, abcnn_2=True,
+            mode="euclidean",
+            # mode="cos"
+        )
 
     train(model_name, model)
 
