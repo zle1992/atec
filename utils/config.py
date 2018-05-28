@@ -5,7 +5,7 @@
 batch_size = 128
 number_classes = 2
 w2v_vec_dim = 256
-word_maxlen = 20
+word_maxlen = 40
 
 
 model_dir = '../model_dir'
@@ -41,3 +41,5 @@ data_hdf = 'data/atec_nlp_sim_train.hdf'
 # w2v_content_word_model = 'data/train_w2v_char.model'
 # data_hdf = 'data/atec_nlp_sim_train_char.hdf'
 
+
+pre_train_w2v = 'data/pre_w2v/sgns.zhihu.word'

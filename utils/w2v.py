@@ -58,12 +58,12 @@ def make_w2v(path):
 
 
 def load_pre_train_w2v(path):
-    def read_vectors(topn):  # read top n word vectors, i.e. top is 10000
+    def read_vectors(path, topn):  # read top n word vectors, i.e. top is 10000
         lines_num, dim = 0, 0
         vectors = {}
         iw = []
         wi = {}
-        with open(config.pre_train_w2v, 'rb') as f:
+        with open(path,'rb') as f:
             first_line = True
             for line in f:
                 if first_line:
@@ -79,41 +79,28 @@ def load_pre_train_w2v(path):
         for i, w in enumerate(iw):
             wi[w] = i
         return vectors, iw, wi, dim
-
-    def load_pre_train_embeddings(vocab, vectors, n_unknown=-1):
+    def load_glove_embeddings(vocab, vectors,n_unknown=-1):
         max_vector_length = len(vocab) + 1  # index start from 1
-        weights = np.zeros((max_vector_length + 2, 300),
-                           dtype='float32')  # 2 for <PAD> and <EOS>
-        cnt = 0
+        matrix = np.zeros((max_vector_length 2, 300), dtype='float32')  # 2 for <PAD> and <EOS>
         # Normalization
         for word in vocab:
             if word in vectors:
-                weights[vocab[word]] = vectors[word]
+                matrix[vocab[word]] =vectors[word]
 
-            else:
-                weights[vocab[word]] = np.random.random(size=weights.shape[1])
-                cnt += 1
-        print('vocab oov rate:', cnt / len(vocab))
-        return weights
+        return matrix
 
-    def read_words(data):
+    if not os.path.exists(config.w2v_pre_train_word_model):
+
+        data = read_cut(path)
         words = list(data.q1_cut) + list(data.q2_cut)
         words_all = []
         for word in words:
             words_all.extend(word)
-        words_set = set(words_all)
-        vocab2id = {}
-        id2vocab = {}
-        for i, word in enumerate(words_set):
-            vocab2id[word.encode('utf8')] = i + 1
-            id2vocab[i + 1] = word.encode('utf8')
-        return vocab2id
+        word_all = set(word_all)
+        vocab = dict([(word, id + 1) for id, word in words_all])
+    vocab['<-UNKNOW->'] = len(vocab) + 1
+    vectors, iw, wi, dim = read_vectors('../data/pre_w2v/sgns.zhihu.word', -1)
 
-  
-    data = read_cut(path)
-    vocab = read_words(data)
-    pre_weights = read_vectors()
-    embed_weights = load_pre_train_embeddings(vocab, pre_weights)
     np.save(config.word_embed_weight, embed_weights)
     print(embed_weights.shape)
     print('save embed_weights!')
