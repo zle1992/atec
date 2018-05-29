@@ -35,7 +35,7 @@ sys.path.append('utils/')
 import config
 
 from process import read_hdf, make_w2v,load_pre_train_w2v
-from help import score, train_batch_generator, train_test, get_X_Y_from_df
+from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
 
 def load_data():
     path = config.origin_csv
@@ -54,7 +54,7 @@ def train(x_train, y_train,x_dev, y_dev,model_name, model):
             K.set_value(model.optimizer.lr, 0.0001)
 
         model.fit_generator(
-            train_batch_generator(x_train, y_train, config.batch_size),
+            train_batch_generator3(x_train, y_train, config.batch_size),
             epochs=1,
             steps_per_epoch=int(y_train.shape[0] / config.batch_size),
             validation_data=(x_dev, y_dev),

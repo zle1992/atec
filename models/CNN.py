@@ -109,10 +109,10 @@ def model_conv1D_():
     mul = Lambda(lambda x: x[0] * x[1],
                  output_shape=(4 * 128 + 2 * 32,))([mergea, mergeb])
 
-    # # Add the magic features
-    # magic_input = Input(shape=(5,))
-    # magic_dense = BatchNormalization()(magic_input)
-    # magic_dense = Dense(64, activation='relu')(magic_dense)
+    # Add the magic features
+    magic_input = Input(shape=(6,))
+    magic_dense = BatchNormalization()(magic_input)
+    magic_dense = Dense(64, activation='relu')(magic_dense)
 
     # # Add the distance features (these are now TFIDF (character and word), Fuzzy matching,
     # # nb char 1 and 2, word mover distance and skew/kurtosis of the sentence
@@ -123,7 +123,7 @@ def model_conv1D_():
 
     # Merge the Magic and distance features with the difference layer
 
-    merge = concatenate([diff, mul])  # , magic_dense, distance_dense])
+    merge = concatenate([diff, mul, magic_dense])  # , magic_dense, distance_dense])
 
     # # The MLP that determines the outcome
     x = Dropout(0.2)(merge)
@@ -134,7 +134,7 @@ def model_conv1D_():
     x = BatchNormalization()(x)
     pred = Dense(2, activation='sigmoid')(x)
 
-    model = Model(inputs=[seq1, seq2], outputs=pred)
+    model = Model(inputs=[seq1, seq2,magic_input], outputs=pred)
     # model = Model(inputs=[seq1, seq2, magic_input,
     #                       distance_input], outputs=pred)
     model.compile(loss='binary_crossentropy',

@@ -22,7 +22,6 @@ data_augment = True
 
 #最原始
 # use_pre_train = False
-
 #cut_char_level = False
 # word_embed_weight = 'data/word_embed_weight_.npy'
 # w2v_content_word_model = 'data/train_w2v.model'
@@ -31,16 +30,17 @@ data_augment = True
 #自定义词典+停用词过滤
 
 
-
-# cut_char_level = False
-# data_hdf = 'data/atec_nlp_sim_train2.hdf'
-# word_embed_weight = 'data/word_embed_weight_2.npy'
-# w2v_content_word_model = 'data/train_w2v2.model'
+use_pre_train = False
+cut_char_level = False
+#data_hdf = 'data/atec_nlp_sim_train2.hdf'
+data_hdf = 'data/atec_nlp_sim_train2_magic.hdf'
+word_embed_weight = 'data/word_embed_weight_2.npy'
+w2v_content_word_model = 'data/train_w2v2.model'
 
 
 # char
 
-
+# use_pre_train = False
 # cut_char_level = True
 # word_embed_weight = 'data/word_embed_weight_char.npy'
 # w2v_content_word_model = 'data/train_w2v_char.model'
@@ -48,9 +48,9 @@ data_augment = True
 
 
 
-use_pre_train = True
-cut_char_level = False
-word_embed_weight = 'data/pre_w2v/my_embeding.npy'
-word_embed_vocab = 'data/pre_w2v/my_vovab.npy'
-w2v_pre_train_dict = 'data/pre_w2v/sgns.zhihu.word'
-data_hdf = 'data/atec_nlp_sim_train_pre_train.hdf'
+# use_pre_train = True
+# cut_char_level = False
+# word_embed_weight = 'data/pre_w2v/my_embeding.npy'
+# word_embed_vocab = 'data/pre_w2v/my_vovab.npy'
+# w2v_pre_train_dict = 'data/pre_w2v/sgns.zhihu.word'
+# data_hdf = 'data/atec_nlp_sim_train_pre_train.hdf'
