@@ -29,16 +29,21 @@ sys.path.append('utils/')
 import config
 
 
-def model_conv1D_(word_maxlen, emb_matrix):
+def create_pretrained_embedding(pretrained_weights_path, trainable=False, **kwargs):
+    "Create embedding layer from a pretrained weights array"
+    pretrained_weights = np.load(pretrained_weights_path)
+    in_dim, out_dim = pretrained_weights.shape
+    embedding = Embedding(in_dim, out_dim, weights=[
+                          pretrained_weights], trainable=True, **kwargs)
+    return embedding
+
+
+def model_conv1D_():
 
     # The embedding layer containing the word vectors
-    emb_layer = Embedding(
-        input_dim=emb_matrix.shape[0],
-        output_dim=emb_matrix.shape[1],
-        weights=[emb_matrix],
-        input_length=word_maxlen,
-        trainable=True
-    )
+    # Embedding
+    emb_layer = create_pretrained_embedding(
+        config.word_embed_weight, mask_zero=False)
 
     # 1D convolutions that can iterate over the word vectors
     conv1 = Conv1D(filters=128, kernel_size=1,
@@ -55,8 +60,8 @@ def model_conv1D_(word_maxlen, emb_matrix):
                    padding='same', activation='relu')
 
     # Define inputs
-    seq1 = Input(shape=(word_maxlen,))
-    seq2 = Input(shape=(word_maxlen,))
+    seq1 = Input(shape=(config.word_maxlen,))
+    seq2 = Input(shape=(config.word_maxlen,))
 
     # Run inputs through embedding
     emb1 = emb_layer(seq1)
