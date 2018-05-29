@@ -10,12 +10,12 @@ import pandas as pd
 import jieba
 sys.path.append('utils/')
 import config
+import w2v
 
 jieba.load_userdict(config.jieba_dict)
-
-
-#stopwords = [line.strip() for line in open(filepath,'r',encoding='utf-8').readlines()]
-stopwords = ['?', ',', '。']
+stopwords = [line.strip() for line in open(config.stopwords_path, 'r').readlines()]
+stopwords = [w.decode('utf8') for w in stopwords]
+#stopwords = [u'？', u'。', u'吗',u'，',u'的']
 
 
 def cut_single(x):
@@ -57,67 +57,17 @@ def make_w2v(path):
     return vocab, embed_weights
 
 
+
 def load_pre_train_w2v(path):
-    def read_vectors(topn):  # read top n word vectors, i.e. top is 10000
-        lines_num, dim = 0, 0
-        vectors = {}
-        iw = []
-        wi = {}
-        with open(config.pre_train_w2v, 'rb') as f:
-            first_line = True
-            for line in f:
-                if first_line:
-                    first_line = False
-                    dim = int(line.rstrip().split()[1])
-                    continue
-                lines_num += 1
-                tokens = line.rstrip().split(' ')
-                vectors[tokens[0]] = np.asarray([float(x) for x in tokens[1:]])
-                iw.append(tokens[0])
-                if topn != 0 and lines_num >= topn:
-                    break
-        for i, w in enumerate(iw):
-            wi[w] = i
-        return vectors, iw, wi, dim
+    if not os.path.exists(config.word_embed_vocab):
+        w2v.save_my_w2v(path)
+    vocab = np.load(config.word_embed_vocab)
+    vocab = {w: i for i, w in enumerate(vocab)}
+    embed_weights = np.load(config.word_embed_weight)
 
-    def load_pre_train_embeddings(vocab, vectors, n_unknown=-1):
-        max_vector_length = len(vocab) + 1  # index start from 1
-        weights = np.zeros((max_vector_length + 2, 300),
-                           dtype='float32')  # 2 for <PAD> and <EOS>
-        cnt = 0
-        # Normalization
-        for word in vocab:
-            if word in vectors:
-                weights[vocab[word]] = vectors[word]
-
-            else:
-                weights[vocab[word]] = np.random.random(size=weights.shape[1])
-                cnt += 1
-        print('vocab oov rate:', cnt / len(vocab))
-        return weights
-
-    def read_words(data):
-        words = list(data.q1_cut) + list(data.q2_cut)
-        words_all = []
-        for word in words:
-            words_all.extend(word)
-        words_set = set(words_all)
-        vocab2id = {}
-        id2vocab = {}
-        for i, word in enumerate(words_set):
-            vocab2id[word.encode('utf8')] = i + 1
-            id2vocab[i + 1] = word.encode('utf8')
-        return vocab2id
-
-  
-    data = read_cut(path)
-    vocab = read_words(data)
-    pre_weights = read_vectors()
-    embed_weights = load_pre_train_embeddings(vocab, pre_weights)
-    np.save(config.word_embed_weight, embed_weights)
-    print(embed_weights.shape)
-    print('save embed_weights!')
+    print('load embed_weights and vocab!')
     return vocab, embed_weights
+#######################################
 
 
 def padding_id(ids, padding_token=0, padding_length=None):
@@ -159,7 +109,10 @@ def read_hdf(path):
 
 def read_data(path):
     data = read_cut(path)
-    vocab, embed_weights = make_w2v(config.origin_csv)
+    if config.use_pre_train:
+        vocab, embed_weights = load_pre_train_w2v(path)
+    else:
+        vocab, embed_weights = make_w2v(path)
 
     data['q1_cut_id'] = data['q1_cut'].map(lambda x: word2id(x, vocab))
     data['q2_cut_id'] = data['q2_cut'].map(lambda x: word2id(x, vocab))
@@ -168,4 +121,5 @@ def read_data(path):
 
 if __name__ == '__main__':
     path = config.origin_csv
-    read_data(path)
+    #read_data(path)
+    #trans_pre_train_w2v(path)

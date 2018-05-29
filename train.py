@@ -34,12 +34,10 @@ from ABCNN import ABCNN
 sys.path.append('utils/')
 import config
 
-from process import read_hdf, make_w2v
+from process import read_hdf, make_w2v,load_pre_train_w2v
 from help import score, train_batch_generator, train_test, get_X_Y_from_df
 
-
-def train(model_name, model):
-
+def load_data():
     path = config.origin_csv
     print('load data')
     data = read_hdf(path)
@@ -48,6 +46,9 @@ def train(model_name, model):
     x_dev, y_dev = get_X_Y_from_df(dev, False)
     print('train shape', x_train[0].shape)
     print('dev shape', x_dev[0].shape)
+    return x_train, y_train,x_dev, y_dev
+
+def train(x_train, y_train,x_dev, y_dev,model_name, model):
     for i in range(15):
         if i == 9:
             K.set_value(model.optimizer.lr, 0.0001)
@@ -70,18 +71,18 @@ def train(model_name, model):
 def main(model_name):
     print('model name', model_name)
     path = config.origin_csv
-    vocab, embed_weights = make_w2v(path)
-
-    if model_name == 'cnn1':
-        model = cnn_v1(config.word_maxlen,
-                       embed_weights, pretrain=True)
-    if model_name == 'cnn2':
-        model = cnn_v2(config.word_maxlen,
-                       embed_weights, pretrain=True)
+    x_train, y_train,x_dev, y_dev = load_data()
+    
+    # if model_name == 'cnn1':
+    #     model = cnn_v1(config.word_maxlen,
+    #                    embed_weights, pretrain=True)
+    # if model_name == 'cnn2':
+    #     model = cnn_v2(config.word_maxlen,
+    #                    embed_weights, pretrain=True)
 
     if model_name == 'cnn':
 
-        model = model_conv1D_(config.word_maxlen, embed_weights)
+        model = model_conv1D_()
 
     if model_name == 'esim':
         model = esim()
@@ -92,13 +93,14 @@ def main(model_name):
 
         model = ABCNN(
             left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=2,
-             nb_filter=300, filter_widths=[4,3],
+            nb_filter=300, filter_widths=[4, 3],
             collect_sentence_representations=True, abcnn_1=True, abcnn_2=True,
             mode="euclidean",
             # mode="cos"
         )
 
-    train(model_name, model)
+    train(x_train, y_train,x_dev, y_dev,model_name, model)
 
 if __name__ == '__main__':
+
     main(sys.argv[1])
