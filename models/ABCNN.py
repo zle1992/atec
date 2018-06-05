@@ -1,8 +1,9 @@
 from __future__ import print_function
 from keras import backend as K
-from keras.layers import Input, Convolution1D, Convolution2D, AveragePooling1D, GlobalAveragePooling1D, Dense, Lambda, merge, TimeDistributed, RepeatVector, Permute, ZeroPadding1D, ZeroPadding2D, Reshape, Dropout, BatchNormalization
+#from keras.layers import Input, Convolution1D, Convolution2D, AveragePooling1D, GlobalAveragePooling1D, Dense, Lambda, merge, TimeDistributed, RepeatVector, Permute, ZeroPadding1D, ZeroPadding2D, Reshape, Dropout, BatchNormalization
 from keras.models import Model
 from keras.layers import *
+from keras.optimizers import Nadam, Adam
 import numpy as np
 import sys
 sys.path.append('utils/')
@@ -92,6 +93,11 @@ def ABCNN(
 
     left_sentence_representations = []
     right_sentence_representations = []
+    if len(config.feats)==0:
+        magic_input = Input(shape=(1,))
+    else:
+        magic_input = Input(shape=(len(config.feats),))
+
 
     left_input = Input(shape=(left_seq_len, ))
     right_input = Input(shape=(right_seq_len,))
@@ -169,13 +175,13 @@ def ABCNN(
         left_embed_padded = ZeroPadding1D(filter_width - 1)(left_embed)
         right_embed_padded = ZeroPadding1D(filter_width - 1)(right_embed)
         conv_left = Convolution1D(
-            nb_filter, filter_width, activation="tanh", border_mode="valid")(left_embed_padded)
+            nb_filter, filter_width, activation="tanh", border_mode="same")(left_embed_padded)
         conv_right = Convolution1D(
-            nb_filter, filter_width, activation="tanh", border_mode="valid")(right_embed_padded)
+            nb_filter, filter_width, activation="tanh", border_mode="same")(right_embed_padded)
 
-    # if batch_normalize:
-    #     conv_left = BatchNormalization()(conv_left)
-    #     conv_right = BatchNormalization()(conv_right)
+    
+        conv_left = BatchNormalization()(conv_left)
+        conv_right = BatchNormalization()(conv_right)
     
     conv_left = Dropout(dropout)(conv_left)
     conv_right = Dropout(dropout)(conv_right)
@@ -185,6 +191,8 @@ def ABCNN(
     pool_right = AveragePooling1D(
         pool_length=filter_width, stride=1, border_mode="valid")(conv_right)
 
+    pool_left = ZeroPadding1D(filter_width - 1)(pool_left)
+    pool_right = ZeroPadding1D(filter_width - 1)(pool_right)
     assert pool_left._keras_shape[1] == left_seq_len, "%s != %s" % (
         pool_left._keras_shape[1], left_seq_len)
     assert pool_right._keras_shape[1] == right_seq_len, "%s != %s" % (
@@ -229,9 +237,9 @@ def ABCNN(
             conv_left = merge([conv_left, conv_attention_left], mode="mul")
             conv_right = merge([conv_right, conv_attention_right], mode="mul")
 
-        # if batch_normalize:
-        #     conv_left = BatchNormalization()(conv_left)
-        #     conv_right = BatchNormalization()(conv_right)
+       
+            conv_left = BatchNormalization()(conv_left)
+            conv_right = BatchNormalization()(conv_right)
 
         conv_left = Dropout(dropout)(conv_left)
         conv_right = Dropout(dropout)(conv_right)
@@ -271,10 +279,10 @@ def ABCNN(
     global_representation = Dropout(dropout)(global_representation)
 
     # Add logistic regression on top.
-    classify = Dense(1, activation="sigmoid")(global_representation)
+    classify = Dense(2, activation="sigmoid")(global_representation)
 
-    model = Model([left_input, right_input], output=classify)
-    model.compile(optimizer="rmsprop",
-                  loss="binary_crossentropy", metrics=["acc"])
+    model = Model([left_input, right_input,magic_input], output=classify)
+    model.compile(loss='binary_crossentropy',
+                  optimizer=Adam(lr=0.1), metrics=['acc'])
     model.summary()
     return model

@@ -54,11 +54,10 @@ def train_batch_generator3(x_source, y_source, batch):
                 batch_list_y = []
 
 
-def score(label, pred, gate=0.5):
+def score(label, pred):
 
     if len(label.shape) == 1:
-        p = (pred > gate).astype("int")
-        p = np.squeeze(p)
+        p = pred
         l = label
     else:
         p = np.argmax(pred, axis=1)

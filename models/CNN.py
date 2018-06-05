@@ -44,19 +44,21 @@ def model_conv1D_():
     # Embedding
     emb_layer = create_pretrained_embedding(
         config.word_embed_weight, mask_zero=False)
+    nbfilters=[128,128,128,128,32,32]
 
+    #nbfilters=[512,512,256,128,64,32]
     # 1D convolutions that can iterate over the word vectors
-    conv1 = Conv1D(filters=128, kernel_size=1,
+    conv1 = Conv1D(filters=nbfilters[0], kernel_size=1,
                    padding='same', activation='relu')
-    conv2 = Conv1D(filters=128, kernel_size=2,
+    conv2 = Conv1D(filters=nbfilters[1], kernel_size=2,
                    padding='same', activation='relu')
-    conv3 = Conv1D(filters=128, kernel_size=3,
+    conv3 = Conv1D(filters=nbfilters[2], kernel_size=3,
                    padding='same', activation='relu')
-    conv4 = Conv1D(filters=128, kernel_size=4,
+    conv4 = Conv1D(filters=nbfilters[3], kernel_size=4,
                    padding='same', activation='relu')
-    conv5 = Conv1D(filters=32, kernel_size=5,
+    conv5 = Conv1D(filters=nbfilters[4], kernel_size=5,
                    padding='same', activation='relu')
-    conv6 = Conv1D(filters=32, kernel_size=6,
+    conv6 = Conv1D(filters=nbfilters[5], kernel_size=6,
                    padding='same', activation='relu')
 
     # Define inputs
@@ -105,14 +107,18 @@ def model_conv1D_():
     # Furthermore we take the multiply different entries to get a different
     # measure of equalness
     diff = Lambda(lambda x: K.abs(
-        x[0] - x[1]), output_shape=(4 * 128 + 2 * 32,))([mergea, mergeb])
+        x[0] - x[1]), output_shape=(sum(nbfilters),))([mergea, mergeb])
     mul = Lambda(lambda x: x[0] * x[1],
-                 output_shape=(4 * 128 + 2 * 32,))([mergea, mergeb])
+                 output_shape=(sum(nbfilters),))([mergea, mergeb])
 
     # Add the magic features
-    magic_input = Input(shape=(6,))
-    magic_dense = BatchNormalization()(magic_input)
-    magic_dense = Dense(64, activation='relu')(magic_dense)
+    if len(config.feats)==0:
+        magic_input = Input(shape=(1,))
+        merge = concatenate([diff, mul])  # , magic_dense, distance_dense])
+    else:
+        magic_input = Input(shape=(len(config.feats),))
+        magic_dense = BatchNormalization()(magic_input)
+        magic_dense = Dense(64, activation='relu')(magic_dense)
 
     # # Add the distance features (these are now TFIDF (character and word), Fuzzy matching,
     # # nb char 1 and 2, word mover distance and skew/kurtosis of the sentence
@@ -123,7 +129,7 @@ def model_conv1D_():
 
     # Merge the Magic and distance features with the difference layer
 
-    merge = concatenate([diff, mul, magic_dense])  # , magic_dense, distance_dense])
+        merge = concatenate([diff, mul, magic_dense])  # , magic_dense, distance_dense])
 
     # # The MLP that determines the outcome
     x = Dropout(0.2)(merge)
@@ -133,6 +139,7 @@ def model_conv1D_():
     x = Dropout(0.2)(x)
     x = BatchNormalization()(x)
     pred = Dense(2, activation='sigmoid')(x)
+
 
     model = Model(inputs=[seq1, seq2,magic_input], outputs=pred)
     # model = Model(inputs=[seq1, seq2, magic_input,
@@ -219,196 +226,85 @@ def cnn_v1(seq_length, embed_weight, pretrain=False):
         BatchNormalization()(Dense(256)(q1_q2)))
     output = Dense(2, activation="softmax")(fc)
     print(output)
-    model = Model(inputs=[q1_input, q2_input], outputs=output)
+    model = Model(inputs=[q1_input, q2_input,magic_input], outputs=output)
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam", metrics=['accuracy'])
     model.summary()
     return model
 
 
-# def get_textcnn3(seq_length, embed_weight, pretrain=False):
-#     '''
-#     deep cnn conv + maxpooling + conv + maxpooling
-#     '''
-#     content = Input(shape=(seq_length,), dtype="int32")
-#     if pretrain:
-#         embedding = Embedding(name='word_embedding', input_dim=config[
-#                               'vocab_size'], weights=[embed_weight], output_dim=config['w2v_vec_dim'], trainable=False)
-#     else:
-#         embedding = Embedding(name='word_embedding', input_dim=config[
-#                               'vocab_size'], output_dim=config['w2v_vec_dim'], trainable=True)
-#     trans_content = Activation(activation="relu")(
-#         BatchNormalization()((TimeDistributed(Dense(256))(embedding(content)))))
-#     feat = convs_block2(trans_content)
-
-#     dropfeat = Dropout(0.2)(feat)
-#     fc = Activation(activation="relu")(
-#         BatchNormalization()(Dense(256)(dropfeat)))
-#     output = Dense(2, activation="softmax")(fc)
-#     model = Model(inputs=content, outputs=output)
-#     model.compile(loss='categorical_crossentropy',
-#                   optimizer="adam", metrics=['accuracy'])
-#     model.summary()
-#     return model
 
 
-# def get_textcnn2(seq_length, embed_weight, pretrain=False):
-#     # 模型结构：词嵌入-卷积池化-卷积池化-flat-drop-softmax
-
-#     main_input = Input(shape=(seq_length,), dtype='float64')
-
-#     # 词嵌入（使用预训练的词向量）
-
-#     if pretrain:
-#         embedding = Embedding(name='word_embedding', input_dim=config[
-#                               'vocab_size'], weights=[embed_weight], output_dim=config['w2v_vec_dim'], trainable=False)
-#     else:
-#         embedding = Embedding(name='word_embedding', input_dim=config[
-#                               'vocab_size'], output_dim=config['w2v_vec_dim'], trainable=True)
-#     embed = embedding(main_input)
-
-#     cnn = Activation(activation='relu')(BatchNormalization()(
-#         Convolution1D(filters=256, kernel_size=3, padding='valid')(embed)))
-#     cnn = MaxPool1D(pool_size=4)(cnn)
-
-#     cnn = Activation(activation='relu')(BatchNormalization()(
-#         Convolution1D(filters=256, kernel_size=3, padding='valid')(cnn)))
-#     #cnn = MaxPool1D(pool_size=4)(cnn)
-#     cnn = GlobalMaxPool1D()(cnn)
-#     #cnn = Flatten()(cnn)
-#     drop = Dropout(0.2)(cnn)
-#     main_output = Dense(config['number_classes'], activation='softmax')(drop)
-#     model = Model(inputs=main_input, outputs=main_output)
-#     model.compile(loss='categorical_crossentropy',
-#                   optimizer=Adam(), metrics=['accuracy'])
-#     return model
 
 
-# def get_textrnn(seq_length, embed_weight, pretrain=False):
-#     # 模型结构：词嵌入-卷积池化*3-拼接-全连接-dropout-全连接
-
-#     main_input = Input(shape=(seq_length,), dtype='float64')
-
-#     # 词嵌入（使用预训练的词向量）
-
-#     if pretrain:
-#         embedding = Embedding(name='word_embedding', input_dim=config[
-#             'vocab_size'], weights=[embed_weight], output_dim=config['w2v_vec_dim'], trainable=False)
-#     else:
-#         embedding = Embedding(name='word_embedding', input_dim=config[
-#             'vocab_size'], output_dim=config['w2v_vec_dim'], trainable=True)
-#     content = embedding(main_input)
-#     # trans_content = Activation(activation="relu")(
-#     #     BatchNormalization()((TimeDistributed(Dense(256))(embedding(co
-#     # print('Build model...')
-#     embed = Bidirectional(GRU(256))(content)
-
-#     # merged = layers.add([encoded_sentence, encoded_question])
-#     merged = BatchNormalization(embed)
-#     merged = Dropout(0.3)(merged)
-#     fc = Activation(activation="relu")(
-#         BatchNormalization()(Dense(256)(merged)))
-#     main_output = Dense(config['number_classes'],
-#                         activation='softmax')(fc)
-
-#     model = Model(inputs=main_input, outputs=main_output)
-#     model.compile(optimizer='adam',
-#                   loss='categorical_crossentropy',
-#                   metrics=['accuracy'])
-#     return model
 
 
-# def get_textrcnn(seq_length, embed_weight, pretrain=False,trainable=False):
-#     # 模型结构：词嵌入-卷积池化
-
-#     main_input = Input(shape=(seq_length,), dtype='float64')
-
-#     # 词嵌入（使用预训练的词向量）
-
-#     if pretrain:
-#         embedding = Embedding(name='word_embedding', input_dim=config[
-#             'vocab_size'], weights=[embed_weight], output_dim=config['w2v_vec_dim'], trainable=trainable)
-#     else:
-#         embedding = Embedding(name='word_embedding', input_dim=config[
-#             'vocab_size'], output_dim=config['w2v_vec_dim'], trainable=True)
-
-#     print('Build model...')
-#     content = embedding(main_input)
-#     trans_content = Activation(activation="relu")(
-#         BatchNormalization()((TimeDistributed(Dense(256))(content))))
-#     conv = Activation(activation="relu")(BatchNormalization()(
-#         Conv1D(filters=128, kernel_size=5, padding="valid")(trans_content)))
-
-#     cnn1 = conv
-#     cnn1 = MaxPool1D(pool_size=5)(cnn1)
-#     gru = Bidirectional(GRU(128))(cnn1)
-
-#     merged = Activation(activation="relu")(gru)
-#     merged = Dropout(0.2)(merged)
-#     main_output = Dense(config['number_classes'],
-#                         activation='softmax')(merged)
-
-#     model = Model(inputs=main_input, outputs=main_output)
-#     model.compile(optimizer='adam',
-#                   loss='categorical_crossentropy',
-#                   metrics=['accuracy'])
-#     return model
 
 
-# def model3():
-#     sequence_length = x_text.shape[1]  # 56
-#     vocabulary_size = config['vocab_size'] + 1  # 18765
-#     embedding_dim = 256
-#     filter_sizes = [3, 4, 5]
-#     num_filters = 512
-#     drop = 0.5
 
-#     epochs = 100
-#     batch_size = 30
 
-#     # this returns a tensor
-#     print("Creating Model...")
-#     inputs = Input(shape=(sequence_length,), dtype='int32')
-#     embedding = Embedding(input_dim=vocabulary_size + 1, weights=[
-#         embed_weight], output_dim=embedding_dim, trainable=True, input_length=config['word_maxlen'])(inputs)
-#     # embedding = Embedding(input_dim=vocabulary_size,
-#     # output_dim=embedding_dim, input_length=sequence_length)(inputs)
 
-#     print('reshape')
-#     reshape = Reshape((sequence_length, embedding_dim, 1))(embedding)
 
-#     conv_0 = Conv2D(num_filters, kernel_size=(filter_sizes[
-#         0], embedding_dim), padding='valid', kernel_initializer='normal', activation='relu')(reshape)
-#     conv_1 = Conv2D(num_filters, kernel_size=(filter_sizes[
-#         1], embedding_dim), padding='valid', kernel_initializer='normal', activation='relu')(reshape)
-#     conv_2 = Conv2D(num_filters, kernel_size=(filter_sizes[
-#         2], embedding_dim), padding='valid', kernel_initializer='normal',
-#         activation='relu')(reshape)
 
-#     maxpool_0 = MaxPool2D(pool_size=(
-#         sequence_length - filter_sizes[0] + 1, 1), strides=(1, 1), padding='valid')(conv_0)
-#     maxpool_1 = MaxPool2D(pool_size=(
-#         sequence_length - filter_sizes[1] + 1, 1), strides=(1, 1), padding='valid')(conv_1)
-#     maxpool_2 = MaxPool2D(pool_size=(
-#         sequence_length - filter_sizes[2] + 1, 1), strides=(1, 1),
-#         padding='valid')(conv_2)
 
-#     concatenated_tensor = Concatenate(axis=1)(
-#         [maxpool_0, maxpool_1, maxpool_2])
-#     flatten = Flatten()(concatenated_tensor)
-#     dropout = Dropout(drop)(flatten)
-#     output = Dense(units=2, activation='softmax')(dropout)
 
-#     # this creates a model that includes
-#     model = Model(inputs=inputs, outputs=output)
 
-#     checkpoint = ModelCheckpoint('weights.{epoch:03d}-{val_acc:.4f}.hdf5',
-#                                  monitor='val_acc', verbose=1, save_best_only=True, mode='auto')
-#     adam = Adam(lr=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+def Siamese_LSTM():
 
-#     model.compile(optimizer=adam, loss='binary_crossentropy',
-#                   metrics=['accuracy'])
-#     print("Traning Model...")
-#     model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, verbose=1,
-#               callbacks=[checkpoint], validation_data=(x_dev, y_dev))  # starts
-#     training
+    # The embedding layer containing the word vectors
+    # Embedding
+    emb_layer = create_pretrained_embedding(
+        config.word_embed_weight, mask_zero=False)
+    # Model variables
+
+    n_hidden = 50
+
+    # Define the shared model
+    x = Sequential()
+    x.add(emb_layer)
+    # CNN
+    # x.add(Conv1D(250, kernel_size=5, activation='relu'))
+    # x.add(GlobalMaxPool1D())
+    # x.add(Dense(250, activation='relu'))
+    # x.add(Dropout(0.3))
+    # # x.add(Dense(1, activation='sigmoid'))
+    # # LSTM
+    x.add(GRU(n_hidden))
+
+    shared_model = x
+
+    # The visible layer
+    if config.feats ==[]:
+        magic_input = Input(shape=(1,))
+    else:
+        magic_input = Input(shape=(len(config.feats),))
+    left_input = Input(shape=(config.word_maxlen,), dtype='int32')
+    right_input = Input(shape=(config.word_maxlen,), dtype='int32')
+
+    # Pack it all up into a Manhattan Distance model
+    malstm_distance = Lambda(lambda x:K.exp(-K.sum(K.abs(x[0] - x[1]), axis=1, keepdims=True) ) ,output_shape=(2,) )([shared_model(left_input), shared_model(right_input)])
+    #ManDist()([shared_model(left_input), shared_model(right_input)])
+    
+    
+
+
+    left =  shared_model(left_input) 
+    right = shared_model(right_input)
+    merge = concatenate([left, right,])  # , magic_dense, distance_dense])
+
+    # # The MLP that determines the outcome
+    x = Dropout(0.2)(merge)
+    x = BatchNormalization()(x)
+    x = Dense(300, activation='relu')(x)
+
+    x = Dropout(0.2)(x)
+    x = BatchNormalization()(x)
+    pred = Dense(2, activation='sigmoid')(x)
+    model = Model(inputs=[left_input, right_input,magic_input], outputs=[pred])
+
+   
+    model.compile(loss='binary_crossentropy',
+                  optimizer="adam", metrics=['acc'])
+    model.summary()
+    shared_model.summary()
+    return model

@@ -28,20 +28,25 @@ from keras.callbacks import TensorBoard
 from keras.callbacks import Callback
 
 sys.path.append('models')
-from CNN import cnn_v1, cnn_v2, model_conv1D_
+from CNN import cnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM
 from ESIM import esim, decomposable_attention
 from ABCNN import ABCNN
+from bimpm import bimpm
 sys.path.append('utils/')
+sys.path.append('feature/')
 import config
-
-from process import read_hdf, make_w2v,load_pre_train_w2v
+from Feats import load_final_df
 from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
-
+from CutWord import read_cut,more
 def load_data():
     path = config.origin_csv
     print('load data')
-    data = read_hdf(path)
+    data = read_cut(path)
     train, dev = train_test(data)
+    if config.more_data>0:
+        train = more(train,n=config.more_data)
+    train, dev=load_final_df(train,config.train_df),load_final_df(dev,config.dev_df)
+
     x_train, y_train = get_X_Y_from_df(train, config.data_augment)
     x_dev, y_dev = get_X_Y_from_df(dev, False)
     print('train shape', x_train[0].shape)
@@ -58,7 +63,7 @@ def train(x_train, y_train,x_dev, y_dev,model_name, model):
             epochs=1,
             steps_per_epoch=int(y_train.shape[0] / config.batch_size),
             validation_data=(x_dev, y_dev),
-            class_weight={0: 1, 1: 3},
+            class_weight={0: 1, 1: 4},
 
         )
         pred = model.predict(x_dev, batch_size=config.batch_size)
@@ -73,9 +78,8 @@ def main(model_name):
     path = config.origin_csv
     x_train, y_train,x_dev, y_dev = load_data()
     
-    # if model_name == 'cnn1':
-    #     model = cnn_v1(config.word_maxlen,
-    #                    embed_weights, pretrain=True)
+    if model_name == 'bimpm':
+        model = bimpm()
     # if model_name == 'cnn2':
     #     model = cnn_v2(config.word_maxlen,
     #                    embed_weights, pretrain=True)
@@ -83,6 +87,9 @@ def main(model_name):
     if model_name == 'cnn':
 
         model = model_conv1D_()
+    if model_name == 'slstm':
+
+        model = Siamese_LSTM()
 
     if model_name == 'esim':
         model = esim()

@@ -83,6 +83,7 @@ def decomposable_attention(pretrained_embedding=config.word_embed_weight,
                            lr=1e-3, activation='elu', maxlen=MAX_LEN):
     # Based on: https://arxiv.org/abs/1606.01933
 
+    magic_input = Input(shape=(len(config.feats),))
     q1 = Input(name='q1', shape=(maxlen,))
     q2 = Input(name='q2', shape=(maxlen,))
 
@@ -137,7 +138,7 @@ def decomposable_attention(pretrained_embedding=config.word_embed_weight,
     dense = Dropout(dense_dropout)(dense)
     out_ = Dense(2, activation='sigmoid')(dense)
 
-    model = Model(inputs=[q1, q2], outputs=out_)
+    model = Model(inputs=[q1, q2,magic_input], outputs=out_)
     model.compile(optimizer=Adam(lr=lr), loss='binary_crossentropy',
                   metrics=['accuracy'])
     model.summary()
@@ -152,6 +153,10 @@ def esim(pretrained_embedding=config.word_embed_weight,
          dense_dropout=0.5):
 
     # Based on arXiv:1609.06038
+    if config.feats==[]:
+        megic_feats = Input(name='megic_feats', shape=(1,))
+    else:
+        megic_feats = Input(name='megic_feats', shape=(len(config.feats),))
     q1 = Input(name='q1', shape=(maxlen,))
     q2 = Input(name='q2', shape=(maxlen,))
 
@@ -196,7 +201,8 @@ def esim(pretrained_embedding=config.word_embed_weight,
     dense = Dropout(dense_dropout)(dense)
     out_ = Dense(2, activation='sigmoid')(dense)
 
-    model = Model(inputs=[q1, q2], outputs=out_)
+
+    model = Model(inputs=[q1, q2,megic_feats], outputs=out_)
     model.compile(optimizer=Adam(lr=1e-3),
                   loss='binary_crossentropy', metrics=['accuracy'])
     model.summary()
