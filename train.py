@@ -35,18 +35,16 @@ from bimpm import bimpm
 sys.path.append('utils/')
 sys.path.append('feature/')
 import config
-from Feats import load_final_df
+from Feats import data_2id,add_hum_feats
 from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
 from CutWord import read_cut,more
 def load_data():
     path = config.origin_csv
     print('load data')
-    data = read_cut(path)
+    data = read_cut(path)  #cut word
+    data = data_2id(data)  # 2id
+    data = add_hum_feats(data,config.train_feats) #生成特征并加入
     train, dev = train_test(data)
-    if config.more_data>0:
-        train = more(train,n=config.more_data)
-    train, dev=load_final_df(train,config.train_df),load_final_df(dev,config.dev_df)
-
     x_train, y_train = get_X_Y_from_df(train, config.data_augment)
     x_dev, y_dev = get_X_Y_from_df(dev, False)
     print('train shape', x_train[0].shape)

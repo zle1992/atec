@@ -62,9 +62,8 @@ more_data=0
 # data_hdf = 'data/atec_nlp_sim_train_pre_train.hdf'
 
 
-feats =[
-#  u'q1_q2_intersect',
-#        u'wordmatch1',
+feats =[u'q1_freq', u'q2_freq', u'freq_mean', u'freq_cross', u'q1_freq_sq',
+       u'q2_freq_sq']
 
 # 'bin_dist1',
 #  'bin_dist2',
@@ -105,7 +104,7 @@ feats =[
 #  'q2_uni1',
 #  'q2_uni2',
  
-]
+
 
 # use_pre_train = False
 # cut_char_level = False
@@ -120,6 +119,7 @@ feats =[
 use_pre_train = False
 cut_char_level = True
 data_cut_hdf ='data/cache/train_cut_char.hdf'
+train_feats = 'data/cache/train_feats_char.hdf'
 data_feat_hdf = 'data/cache/train_magic_char.hdf'
 train_df= 'data/cache/train_magic_char_train_f{0}.hdf'.format(len(feats))
 dev_df = 'data/cache/train_magic_char_more_dev_f{0}.hdf'.format(len(feats))
