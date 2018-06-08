@@ -102,8 +102,8 @@ def main(model_name):
             left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=2,
             nb_filter=300, filter_widths=[4, 3],
             collect_sentence_representations=True, abcnn_1=True, abcnn_2=True,
-            mode="euclidean",
-            # mode="cos"
+            #mode="euclidean",
+            mode="cos"
         )
 
     train(x_train, y_train,x_dev, y_dev,model_name, model)

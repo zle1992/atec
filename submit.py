@@ -19,8 +19,9 @@ from keras.activations import softmax
 from keras import backend
 # Model Load
 sys.path.append('utils/')
+sys.path.append('feature/')
 import config
-from process import read_data, make_w2v
+from feat_gen import load_final_test_df
 from help import get_X_Y_from_df
 
 for file in os.listdir('./'):
@@ -31,8 +32,7 @@ for file in os.listdir('./'):
 
 def main(in_path, out_path):
 
-    vocab, embed_weights = make_w2v(config.origin_csv)
-    data = read_data(in_path)
+    data = load_final_test_df(in_path)
     data.label = data.label.fillna(0)
     X, _ = get_X_Y_from_df(data,False)
     print('load model and predict')

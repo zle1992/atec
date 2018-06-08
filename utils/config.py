@@ -107,25 +107,25 @@ feats =[
  
 ]
 
-use_pre_train = False
-cut_char_level = False
-data_cut_hdf ='data/cache/train_cut_word.hdf'
-data_feat_hdf = 'data/cache/train_magic_word.hdf'
-train_df= 'data/cache/train_magic_word_train_f{0}.hdf'.format(len(feats))
-dev_df = 'data/cache/train_magic_word_more_dev_f{0}.hdf'.format(len(feats))
-
-word_embed_weight = 'data/my_w2v/word_embed_weight_word.npy'
-w2v_content_word_model = 'data/my_w2v/train_word.model'
-
 # use_pre_train = False
-# cut_char_level = True
-# data_cut_hdf ='data/cache/train_cut_char.hdf'
-# data_feat_hdf = 'data/cache/train_magic_char.hdf'
-# train_df= 'data/cache/train_magic_char_train_f{0}.hdf'.format(len(feats))
-# dev_df = 'data/cache/train_magic_char_more_dev_f{0}.hdf'.format(len(feats))
+# cut_char_level = False
+# data_cut_hdf ='data/cache/train_cut_word.hdf'
+# data_feat_hdf = 'data/cache/train_magic_word.hdf'
+# train_df= 'data/cache/train_magic_word_train_f{0}.hdf'.format(len(feats))
+# dev_df = 'data/cache/train_magic_word_more_dev_f{0}.hdf'.format(len(feats))
 
-# word_embed_weight = 'data/my_w2v/word_embed_weight_char.npy'
-# w2v_content_word_model = 'data/my_w2v/train_char.model'
+# word_embed_weight = 'data/my_w2v/word_embed_weight_word.npy'
+# w2v_content_word_model = 'data/my_w2v/train_word.model'
+
+use_pre_train = False
+cut_char_level = True
+data_cut_hdf ='data/cache/train_cut_char.hdf'
+data_feat_hdf = 'data/cache/train_magic_char.hdf'
+train_df= 'data/cache/train_magic_char_train_f{0}.hdf'.format(len(feats))
+dev_df = 'data/cache/train_magic_char_more_dev_f{0}.hdf'.format(len(feats))
+
+word_embed_weight = 'data/my_w2v/word_embed_weight_char.npy'
+w2v_content_word_model = 'data/my_w2v/train_char.model'
 
 
 
