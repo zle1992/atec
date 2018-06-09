@@ -36,7 +36,7 @@ def main(in_path,out_path):
     print('load data')
     data = cut_word(in_path,config.cut_char_level)
     data = data_2id(data)  # 2id
-    data = add_hum_feats(data,config.test_feats) #生成特征并加入
+    data = add_hum_feats(data,'') #生成特征并加入
     X, _ = get_X_Y_from_df(data, False,False)
     if config.feats==[]:
         X = X[:2]
@@ -54,7 +54,7 @@ def main_test(model_path):
     print('load data')
     data = cut_word(in_path,config.cut_char_level)
     data = data_2id(data)  # 2id
-    data = add_hum_feats(data,config.test_feats) #生成特征并加入
+    data = add_hum_feats(data,'') #生成特征并加入
     X, _ = get_X_Y_from_df(data, False,False)
     if config.feats==[]:
         X = X[:2]

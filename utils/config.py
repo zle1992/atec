@@ -104,14 +104,11 @@ feats =[u'q1_freq', u'q2_freq', u'freq_mean', u'freq_cross', u'q1_freq_sq',
 #  'q2_uni1',
 #  'q2_uni2',
  
-<<<<<<< HEAD
-=======
 
->>>>>>> adf1563dad6372a73f1d278900bfd835c90ea203
 
 
 use_pre_train = False
-<<<<<<< HEAD
+
 cut_char_level = False
 data_cut_hdf ='data/cache/train_cut_word.hdf'
 train_feats = 'data/cache/train_feats_word.hdf'
@@ -133,7 +130,7 @@ w2v_content_word_model = 'data/my_w2v/train_word.model'
 
 # word_embed_weight = 'data/my_w2v/word_embed_weight_char.npy'
 # w2v_content_word_model = 'data/my_w2v/train_char.model'
-=======
+
 cut_char_level = True
 data_cut_hdf ='data/cache/train_cut_char.hdf'
 train_feats = 'data/cache/train_feats_char.hdf'
@@ -143,7 +140,7 @@ dev_df = 'data/cache/train_magic_char_more_dev_f{0}.hdf'.format(len(feats))
 
 word_embed_weight = 'data/my_w2v/word_embed_weight_char.npy'
 w2v_content_word_model = 'data/my_w2v/train_char.model'
->>>>>>> adf1563dad6372a73f1d278900bfd835c90ea203
+
 
 
 

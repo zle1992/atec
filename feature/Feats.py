@@ -67,7 +67,8 @@ def load_hum_feats(data,path):
         return pd.read_hdf(path)
     else:
         data=human_feats(data,path)
-        data.to_hdf(path,'data')
+        if path !='':
+            data.to_hdf(path,'data')
         return data
 
 def add_hum_feats(data,path):
