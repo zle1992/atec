@@ -35,18 +35,16 @@ from bimpm import bimpm
 sys.path.append('utils/')
 sys.path.append('feature/')
 import config
-from Feats import load_final_df
+from Feats import data_2id,add_hum_feats
 from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
 from CutWord import read_cut,more
 def load_data():
     path = config.origin_csv
     print('load data')
-    data = read_cut(path)
+    data = read_cut(path)  #cut word
+    data = data_2id(data)  # 2id
+    data = add_hum_feats(data,config.train_feats) #生成特征并加入
     train, dev = train_test(data)
-    if config.more_data>0:
-        train = more(train,n=config.more_data)
-    train, dev=load_final_df(train,config.train_df),load_final_df(dev,config.dev_df)
-
     x_train, y_train = get_X_Y_from_df(train, config.data_augment)
     x_dev, y_dev = get_X_Y_from_df(dev, False)
     print('train shape', x_train[0].shape)
@@ -67,7 +65,16 @@ def train(x_train, y_train,x_dev, y_dev,model_name, model):
 
         )
         pred = model.predict(x_dev, batch_size=config.batch_size)
+        pred_train = model.predict(x_train, batch_size=config.batch_size)
+        
         pre, rec, f1 = score(y_dev, pred)
+
+        np.save(config.model_dir + "/val_pred_%s_%s.npz" %
+                   (model_name, f1),np.array(pred))
+        np.save(config.model_dir + "/train_pred_%s_%s.npz" %
+                   (model_name, f1),np.array(pred_train))
+
+        
         model.save(config.model_dir + "/dp_embed_%s_%s.h5" %
                    (model_name, f1))
         print('p r f1 ', pre, rec, f1)
@@ -99,11 +106,12 @@ def main(model_name):
     if model_name == 'abcnn':
 
         model = ABCNN(
-            left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=2,
-            nb_filter=300, filter_widths=[4, 3],
+            left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=3,
+            nb_filter=100, filter_widths=[5,4,3],
             collect_sentence_representations=True, abcnn_1=True, abcnn_2=True,
             #mode="euclidean",
-            mode="cos"
+            mode="cos",
+            #mode='dot'
         )
 
     train(x_train, y_train,x_dev, y_dev,model_name, model)

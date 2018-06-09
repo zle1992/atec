@@ -57,11 +57,3 @@ def magic1(train_in):
     return comb[ret_cols]
 
 
-data = pd.read_hdf('../data/atec_nlp_sim_train2.hdf')
-data['q1_cut'] = data.q1_cut.map(lambda x: ' '.join(x))
-data['q2_cut'] = data.q2_cut.map(lambda x: ' '.join(x))
-df1 = magic1(data)
-data['magic_feat'] = list(df1.values)
-data['q1_cut'] = data.q1_cut.map(lambda x: x.split())
-data['q2_cut'] = data.q2_cut.map(lambda x: x.split())
-data.to_hdf('../data/atec_nlp_sim_train2_magic.hdf', "data")
