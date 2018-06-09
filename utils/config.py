@@ -110,6 +110,7 @@ use_pre_train = False
 cut_char_level = False
 data_cut_hdf ='data/cache/train_cut_word.hdf'
 train_feats = 'data/cache/train_feats_word.hdf'
+test_feats= 'data/cache/test_feats_word.hdf'
 data_feat_hdf = 'data/cache/train_magic_word.hdf'
 train_df= 'data/cache/train_magic_word_train_f{0}.hdf'.format(len(feats))
 dev_df = 'data/cache/train_magic_word_more_dev_f{0}.hdf'.format(len(feats))

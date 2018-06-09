@@ -21,29 +21,51 @@ from keras import backend
 sys.path.append('utils/')
 sys.path.append('feature/')
 import config
-from feat_gen import load_final_test_df
+from Feats import data_2id,add_hum_feats
+from CutWord import cut_word
 from help import get_X_Y_from_df
 
-for file in os.listdir('./'):
-    if file.endswith('.h5'):
-        model_path = file    
 
 
+def main(in_path,out_path):
 
-def main(in_path, out_path):
+    for file in os.listdir('./'):
+        if file.endswith('.h5'):
+            model_path = file   
 
-    data = load_final_test_df(in_path)
-    data.label = data.label.fillna(0)
-    X, _ = get_X_Y_from_df(data,False)
+    print('load data')
+    data = cut_word(in_path,config.cut_char_level)
+    data = data_2id(data)  # 2id
+    data = add_hum_feats(data,config.test_feats) #生成特征并加入
+    X, _ = get_X_Y_from_df(data, False,False)
+    if config.feats==[]:
+        X = X[:2]
     print('load model and predict')
     model = load_model(model_path, custom_objects={"softmax": softmax})
+    test_pred = model.predict(X, batch_size=config.batch_size)
+    print('save submit file')
+    data['label'] = test_pred[:, 1]
+    data[['id','label']].to_csv(out_path, index=False, header=None,sep='\t')
 
-    test_model_pred = np.squeeze(model.predict(X))
-    data['label'] = [int(x > 0.5) for x in test_model_pred[:, 1]]
-    data[['id', 'label']].to_csv(
-        out_path, index=False, header=None, sep='\t')
+
+def main_test(model_path):
+    in_path = 'submit/a.csv'
+    out_path = 'submit/{0}.csv'.format(model_path.split('/')[-1])
+    print('load data')
+    data = cut_word(in_path,config.cut_char_level)
+    data = data_2id(data)  # 2id
+    data = add_hum_feats(data,config.test_feats) #生成特征并加入
+    X, _ = get_X_Y_from_df(data, False,False)
+    if config.feats==[]:
+        X = X[:2]
+
+    print('load model and predict')
+    model = load_model(model_path, custom_objects={"softmax": softmax})
+    test_pred = model.predict(X, batch_size=config.batch_size)
+    print('save submit file')
+    data['label'] = test_pred[:, 1]
+    data[['id','label']].to_csv(out_path, index=False, header=None,sep='\t')
 
 if __name__ == '__main__':
-    in_path = 'submit/a.csv'
-    out_path = 'submit/sub.csv'
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1],sys.argv[2])
+    #main_test(sys.argv[1])

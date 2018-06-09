@@ -84,6 +84,7 @@ def cut_word(path,cut_char_level):
 
     data = pd.read_csv(path, sep='\t', encoding='utf8',#nrows=1000,
                        names=['id', 'q1', 'q2', 'label'])
+    data['label'] = data['label'].fillna(0)
     data['q1_cut'] = data['q1'].map(lambda x: cut_single(x,cut_char_level))
     data['q2_cut'] = data['q2'].map(lambda x: cut_single(x,cut_char_level))
     print('cut done')

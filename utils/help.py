@@ -70,7 +70,14 @@ def score(label, pred):
     return pre_score, rec_score, f_score
 
 
-def get_X_Y_from_df(data, data_augment):
+def get_X_Y_from_df(data, data_augment=True,sampling = True):
+    sampling = True
+    if sampling:
+        data1 = data[data.label==1]
+        data2 = data1.append(data1).append(data1).append(data1)
+        data = data.append(data2)
+
+
     data_q1 = np.array(list(data.q1_cut_id.values))
     data_q2 = np.array(list(data.q2_cut_id.values))
 
