@@ -20,6 +20,7 @@ from keras import backend as K
 from keras.engine.topology import Layer
 from keras.backend.tensorflow_backend import set_session
 import time
+from keras.activations import softmax
 from tensorflow.contrib import learn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, f1_score
@@ -28,7 +29,9 @@ from keras import backend as K
 sys.path.append('utils/')
 import config
 
-
+sys.path.append('models/layers/')
+from MatchTensor import *
+from SpatialGRU import *
 def create_pretrained_embedding(pretrained_weights_path, trainable=False, **kwargs):
     "Create embedding layer from a pretrained weights array"
     pretrained_weights = np.load(pretrained_weights_path)
@@ -38,15 +41,97 @@ def create_pretrained_embedding(pretrained_weights_path, trainable=False, **kwar
     return embedding
 
 
+def drmm_tks(num_layer=1, hidden_sizes=[256],topk=20):
+    emb_layer = create_pretrained_embedding(
+        config.word_embed_weight, mask_zero=False)
+    q1 = Input(shape=(config.word_maxlen,))
+    q2 = Input(shape=(config.word_maxlen,))
+    if len(config.feats) == 0:
+        magic_input = Input(shape=(1,))
+    else:
+        magic_input = Input(shape=(len(config.feats),))
+    q1_embed = emb_layer(q1)
+
+    q2_embed = emb_layer(q2)
+
+    mm = Dot(axes=[2, 2], normalize=True)([q1_embed, q2_embed])
+
+    # compute term gating
+    w_g = Dense(1)(q1_embed)
+
+    g = Lambda(lambda x: softmax(x, axis=1), output_shape=(
+        config.word_maxlen, ))(w_g)
+  
+    g = Reshape((config.word_maxlen,))(g)
+  
+
+    mm_k = Lambda(lambda x: K.tf.nn.top_k(
+        x, k=topk, sorted=True)[0])(mm)
+  
+
+    for i in range(num_layer):
+        mm_k = Dense(hidden_sizes[i], activation='softplus',
+                     kernel_initializer='he_uniform', bias_initializer='zeros')(mm_k)
+        
+
+    mm_k_dropout = Dropout(rate=0.5)(mm_k)
+  
+
+    mm_reshape =  mm_k_dropout #Reshape((config.word_maxlen,))(mm_k_dropout)
+   
+
+    mean = Dot(axes=[1, 1])([mm_reshape, g])
+  
+
+    out_ = Dense(2, activation='softmax')(mean)
+
+
+    model = Model(inputs=[q1, q2, magic_input], outputs=out_)
+    model.compile(loss='binary_crossentropy',
+                  optimizer='adam', metrics=['acc'])
+    model.summary()
+    return model
+
+def MATCHSRNN(channel=20):
+    emb_layer = create_pretrained_embedding(
+        config.word_embed_weight, mask_zero=False)
+    q1 = Input(shape=(config.word_maxlen,))
+    q2 = Input(shape=(config.word_maxlen,))
+    if len(config.feats) == 0:
+        magic_input = Input(shape=(1,))
+    else:
+        magic_input = Input(shape=(len(config.feats),))
+    q1_embed = emb_layer(q1)
+
+    q2_embed = emb_layer(q2)
+
+    match_tensor = MatchTensor(channel=channel)([q1_embed, q2_embed])
+        
+    match_tensor_permute = Permute((2, 3, 1))(match_tensor)
+    h_ij = SpatialGRU()(match_tensor)
+        
+    h_ij_drop = Dropout(rate=0.5)(h_ij)
+        
+
+    out_ = Dense(2, activation='softmax')(h_ij_drop)
+    
+      
+
+
+    model = Model(inputs=[q1, q2, magic_input], outputs=out_)
+    model.compile(loss='binary_crossentropy',
+                  optimizer='adam', metrics=['acc'])
+    model.summary()
+    return model
 def model_conv1D_():
 
     # The embedding layer containing the word vectors
     # Embedding
     emb_layer = create_pretrained_embedding(
         config.word_embed_weight, mask_zero=False)
-    nbfilters=[128,128,128,128,32,32]
+    nbfilters = [128, 128, 128, 128, 32, 32]
 
-    #nbfilters=[512,512,256,128,64,32]
+    # nbfilters=[512,512,256,128,64,32]
     # 1D convolutions that can iterate over the word vectors
     conv1 = Conv1D(filters=nbfilters[0], kernel_size=1,
                    padding='same', activation='relu')
@@ -112,7 +197,7 @@ def model_conv1D_():
                  output_shape=(sum(nbfilters),))([mergea, mergeb])
 
     # Add the magic features
-    if len(config.feats)==0:
+    if len(config.feats) == 0:
         magic_input = Input(shape=(1,))
         merge = concatenate([diff, mul])  # , magic_dense, distance_dense])
     else:
@@ -129,7 +214,8 @@ def model_conv1D_():
 
     # Merge the Magic and distance features with the difference layer
 
-        merge = concatenate([diff, mul, magic_dense])  # , magic_dense, distance_dense])
+        # , magic_dense, distance_dense])
+        merge = concatenate([diff, mul, magic_dense])
 
     # # The MLP that determines the outcome
     x = Dropout(0.2)(merge)
@@ -140,8 +226,7 @@ def model_conv1D_():
     x = BatchNormalization()(x)
     pred = Dense(2, activation='sigmoid')(x)
 
-
-    model = Model(inputs=[seq1, seq2,magic_input], outputs=pred)
+    model = Model(inputs=[seq1, seq2, magic_input], outputs=pred)
     # model = Model(inputs=[seq1, seq2, magic_input,
     #                       distance_input], outputs=pred)
     model.compile(loss='binary_crossentropy',
@@ -226,27 +311,11 @@ def cnn_v1(seq_length, embed_weight, pretrain=False):
         BatchNormalization()(Dense(256)(q1_q2)))
     output = Dense(2, activation="softmax")(fc)
     print(output)
-    model = Model(inputs=[q1_input, q2_input,magic_input], outputs=output)
+    model = Model(inputs=[q1_input, q2_input, magic_input], outputs=output)
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam", metrics=['accuracy'])
     model.summary()
     return model
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def Siamese_LSTM():
@@ -274,7 +343,7 @@ def Siamese_LSTM():
     shared_model = x
 
     # The visible layer
-    if config.feats ==[]:
+    if config.feats == []:
         magic_input = Input(shape=(1,))
     else:
         magic_input = Input(shape=(len(config.feats),))
@@ -282,15 +351,13 @@ def Siamese_LSTM():
     right_input = Input(shape=(config.word_maxlen,), dtype='int32')
 
     # Pack it all up into a Manhattan Distance model
-    malstm_distance = Lambda(lambda x:K.exp(-K.sum(K.abs(x[0] - x[1]), axis=1, keepdims=True) ) ,output_shape=(2,) )([shared_model(left_input), shared_model(right_input)])
+    malstm_distance = Lambda(lambda x: K.exp(-K.sum(K.abs(x[0] - x[1]), axis=1, keepdims=True)), output_shape=(
+        2,))([shared_model(left_input), shared_model(right_input)])
     #ManDist()([shared_model(left_input), shared_model(right_input)])
-    
-    
 
-
-    left =  shared_model(left_input) 
+    left = shared_model(left_input)
     right = shared_model(right_input)
-    merge = concatenate([left, right,])  # , magic_dense, distance_dense])
+    merge = concatenate([left, right, ])  # , magic_dense, distance_dense])
 
     # # The MLP that determines the outcome
     x = Dropout(0.2)(merge)
@@ -300,9 +367,9 @@ def Siamese_LSTM():
     x = Dropout(0.2)(x)
     x = BatchNormalization()(x)
     pred = Dense(2, activation='sigmoid')(x)
-    model = Model(inputs=[left_input, right_input,magic_input], outputs=[pred])
+    model = Model(inputs=[left_input, right_input,
+                          magic_input], outputs=[pred])
 
-   
     model.compile(loss='binary_crossentropy',
                   optimizer="adam", metrics=['acc'])
     model.summary()
