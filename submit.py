@@ -75,7 +75,7 @@ def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
         for kf in range(1, kfolds + 1):
             print('kf: ', kf)
             print('epoch_num: ', epoch_num + 1)
-            model = load_model("stack_data/_%s_%s.h5" %
+            model = load_model(config.stack_path+"_%s_%s.h5" %
                                (model_name, epoch_num), custom_objects={"softmax": softmax})
             pred = model.predict(X_dev, batch_size=config.batch_size)
 
@@ -83,7 +83,7 @@ def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
         S_test[:, epoch_num] /= kfolds
 
         test_df['epoch_%s' % (epoch_num)] = S_test[:, epoch_num]
-        test_df.to_csv('stack_data/test_%s.csv' % (model_name),
+        test_df.to_csv(config.stack_path+'test_%s.csv' % (model_name),
                        index=False,)
         if mean_epoch:
             pred = np.mean(S_test, axis=1)

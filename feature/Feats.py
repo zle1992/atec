@@ -72,6 +72,7 @@ def load_hum_feats(data,path):
         return data
 
 def add_hum_feats(data,path):
+
     if config.feats==[]:
             data['magic_feat'] = 0
     else:

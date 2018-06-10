@@ -46,7 +46,10 @@ def load_data():
     data = read_cut(path)  # cut word
     data = data_2id(data)  # 2id
     data = add_hum_feats(data, config.train_feats)  # 生成特征并加入
+
     x_train, y_train = get_X_Y_from_df(data, config.data_augment)
+    print(len(x_train[2]))
+    
     return x_train, y_train
 
 
@@ -65,11 +68,15 @@ def make_train_cv_data(X_train, Y_train, model, model_name, epoch_nums, kfolds):
         k = 0
         for train_index, test_index in kf.split(Y):
             k += 1
-            x_train = [X[0][train_index, :], X[1]
-                       [train_index, :], X[2][train_index, :]]
-            y_train = Y[test_index, :]
-            x_dev = [X[0][test_index, :], X[1]
-                      [test_index, :], X[2][test_index, :]]
+            
+            if config.feats == []:
+                x_train = [X[0][train_index, :], X[1][train_index, :], X[2][train_index]]
+                x_dev = [X[0][test_index, :], X[1][test_index, :],X[2][test_index]] 
+            else:
+                
+                x_train = [X[0][train_index, :], X[1][train_index, :], X[2][train_index, :]]
+                x_dev = [X[0][test_index, :], X[1][test_index, :],X[2][test_index, :]]       
+            y_train=Y[train_index,:]
             y_dev = Y[test_index, :]
             print('kf: ', k)
             print('epoch_num: ', epoch_num + 1)
@@ -99,10 +106,10 @@ def make_train_cv_data(X_train, Y_train, model, model_name, epoch_nums, kfolds):
         print(np.array([p, r, f, ]).T)
         print('mean :', np.mean(np.array(p)),
               np.mean(np.array(r)), np.mean(np.array(f)))
-        model.save("stack_data/_%s_%s.h5" %
+        model.save(config.stack_path+"_%s_%s.h5" %
                    (model_name, epoch_num))
 
-    train_df.to_csv('stack_data/train_%s.csv' % (model_name),
+    train_df.to_csv(config.stack_path+'train_%s.csv' % (model_name),
                     index=False, )
 
 
