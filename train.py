@@ -32,6 +32,7 @@ from CNN import cnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM
 from ESIM import esim, decomposable_attention
 from ABCNN import ABCNN
 from bimpm import bimpm
+from MatchZoo import *
 sys.path.append('utils/')
 sys.path.append('feature/')
 import config
@@ -45,8 +46,8 @@ def load_data():
     data = data_2id(data)  # 2id
     data = add_hum_feats(data,config.train_feats) #生成特征并加入
     train, dev = train_test(data)
-    x_train, y_train = get_X_Y_from_df(train, config.data_augment)
-    x_dev, y_dev = get_X_Y_from_df(dev, False)
+    x_train, y_train = get_X_Y_from_df(train, config.data_augment,False)
+    x_dev, y_dev = get_X_Y_from_df(dev, False,False)
     print('train shape', x_train[0].shape)
     print('dev shape', x_dev[0].shape)
     return x_train, y_train,x_dev, y_dev
@@ -87,10 +88,15 @@ def main(model_name):
     
     if model_name == 'bimpm':
         model = bimpm()
-    # if model_name == 'cnn2':
-    #     model = cnn_v2(config.word_maxlen,
-    #                    embed_weights, pretrain=True)
+    if model_name == 'drmmt':
+        model = drmm_tks(num_layer=3, hidden_sizes=[100,80,1],topk=20)
 
+    if model_name == 'msrnn':
+        model = MATCHSRNN()
+    if model_name == 'arc2':
+        model = arc2()
+    if model_name == 'test':
+        model = test()
     if model_name == 'cnn':
 
         model = model_conv1D_()
