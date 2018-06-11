@@ -71,7 +71,8 @@ def score(label, pred):
 
 
 def get_X_Y_from_df(data, data_augment=True,sampling = True):
-    sampling = True
+    #data = data[:230]
+    sampling = False
     if sampling:
         data1 = data[data.label==1]
         data2 = data1.append(data1).append(data1).append(data1)
@@ -99,7 +100,7 @@ def get_X_Y_from_df(data, data_augment=True,sampling = True):
 
 
 def train_test(data, test_size=0.1):
-    data = data.sample(frac=1, random_state=2018)
+    data = data.sample(frac=1, random_state=2017)
     train = data[:int(len(data) * (1 - test_size))]
     test = data[int(len(data) * (1 - test_size)):]
 
