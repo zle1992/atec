@@ -9,17 +9,6 @@ import sys
 sys.path.append('utils/')
 import config
 
-# def compute_euclidean_match_score(l_r):
-#     l, r = l_r
-#     return 1. / (1. +
-#         K.sqrt(
-#             -2 * K.batch_dot(l, r, axes=[2, 2]) +
-#             K.expand_dims(K.sum(K.square(l), axis=2), 2) +
-#             K.expand_dims(K.sum(K.square(r), axis=2), 1)
-#         )
-#     )
-#
-#
 
 
 def compute_cos_match_score(l_r):
@@ -42,22 +31,6 @@ def compute_euclidean_match_score(l_r):
     return 1. / denominator
 
 
-# def compute_cos_match_score(l_r):
-#     # K.batch_dot(
-#     #     K.l2_normalize(l, axis=-1),
-#     #     K.l2_normalize(r, axis=-1),
-#     #     axes=[2, 2]
-#     # )
-#
-#     l, r = l_r
-#     denominator = K.sqrt(K.batch_dot(l, l, axes=[2, 2]) *
-#                          K.batch_dot(r, r, axes=[2, 2]))
-#     denominator = K.maximum(denominator, K.epsilon())
-#     output = K.batch_dot(l, r, axes=[2, 2]) / denominator
-#     # output = K.expand_dims(output, 1)
-#     # denominator = K.maximum(denominator, K.epsilon())
-#     return output
-
 
 def MatchScore(l, r, mode="euclidean"):
     if mode == "euclidean":
@@ -77,10 +50,17 @@ def MatchScore(l, r, mode="euclidean"):
     else:
         raise ValueError("Unknown match score mode %s" % mode)
 
-
+def convs_block(data, convs=[3, 4, 5], f=256):
+    pools = []
+    for c in convs:
+        conv = Activation(activation="relu")(BatchNormalization()(
+            Conv1D(filters=f, kernel_size=c, padding="valid")(data)))
+        pool = GlobalMaxPool1D()(conv)
+        pools.append(pool)
+    return concatenate(pools)
 def ABCNN(
     left_seq_len, right_seq_len, nb_filter, filter_widths,
-    depth=2, dropout=0.4, abcnn_1=True, abcnn_2=True, collect_sentence_representations=False, mode="euclidean", batch_normalize=True
+    depth=2, dropout=0.5, abcnn_1=True, abcnn_2=True, collect_sentence_representations=False, mode="euclidean", batch_normalize=True
 ):
     assert depth >= 1, "Need at least one layer to build ABCNN"
     assert not (
@@ -110,9 +90,9 @@ def ABCNN(
     left_embed = embedding(left_input)
     right_embed = embedding(right_input)
 
-    # if batch_normalize:
-    #     left_embed = BatchNormalization()(left_embed)
-    #     right_embed = BatchNormalization()(right_embed)
+
+    left_embed = BatchNormalization()(left_embed)
+    right_embed = BatchNormalization()(right_embed)
 
     filter_width = filter_widths.pop(0)
     if abcnn_1:
@@ -143,27 +123,28 @@ def ABCNN(
         right_embed = merge([right_embed, attention_right],
                             mode="concat", concat_axis=1)
 
-        # Padding so we have wide convolution
-        left_embed_padded = ZeroPadding2D((filter_width - 1, 0))(left_embed)
-        right_embed_padded = ZeroPadding2D((filter_width - 1, 0))(right_embed)
+        # # Padding so we have wide convolution
+        # left_embed_padded = ZeroPadding2D((filter_width - 1, 0))(left_embed)
+        # right_embed_padded = ZeroPadding2D((filter_width - 1, 0))(right_embed)
+
+       
+        left_embed_padded = left_embed
+        right_embed_padded = right_embed
 
         # 2D convolutions so we have the ability to treat channels.
         # Effectively, we are still doing 1-D convolutions.
-        conv_left = Convolution2D(
-            nb_filter=nb_filter, nb_row=filter_width, nb_col=out_dim, activation="tanh", border_mode="valid",
-            dim_ordering="th"
-        )(left_embed_padded)
-
+  
+        my_conv2d = Conv2D(activation="tanh", data_format="channels_first", padding="valid", filters=nb_filter, kernel_size=(filter_width, out_dim))
+        my_conv2d2 = Conv2D(activation="tanh", data_format="channels_first", padding="valid", filters=nb_filter, kernel_size=(filter_width, out_dim))
+        conv_left = my_conv2d(left_embed_padded)
+        
         # Reshape and Permute to get back to 1-D
         conv_left = (Reshape((conv_left._keras_shape[1], conv_left._keras_shape[2])))(
             conv_left)
         conv_left = Permute((2, 1))(conv_left)
 
-        conv_right = Convolution2D(
-            nb_filter=nb_filter, nb_row=filter_width, nb_col=out_dim, activation="tanh",
-            border_mode="valid",
-            dim_ordering="th"
-        )(right_embed_padded)
+
+        conv_right = my_conv2d2(right_embed_padded)
 
         # Reshape and Permute to get back to 1-D
         conv_right = (
@@ -283,6 +264,6 @@ def ABCNN(
 
     model = Model([left_input, right_input,magic_input], output=classify)
     model.compile(loss='binary_crossentropy',
-                  optimizer=Adam(lr=0.1), metrics=['acc'])
+                  optimizer=Adam(lr=0.01), metrics=['acc'])
     model.summary()
     return model

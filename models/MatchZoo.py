@@ -93,7 +93,7 @@ def drmm_tks(num_layer=4, hidden_sizes=[256,128,128,64],topk=20):
     model.summary()
     return model
 
-def MATCHSRNN(channel=20):
+def MATCHSRNN(channel=2):
     emb_layer = create_pretrained_embedding(
         config.word_embed_weight, mask_zero=False)
     q1 = Input(shape=(config.word_maxlen,))

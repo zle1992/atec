@@ -14,14 +14,14 @@ jieba.load_userdict(config.jieba_dict)
 stopwords = [line.strip() for line in open(config.stopwords_path, 'r').readlines()]
 stopwords = [w.decode('utf8') for w in stopwords]
 # stopwords=[]
-# if config.cut_char_level:
-stopwords = [u'？', u'。', u'吗',u'，',u'的',u'怎么办',u'怎么']
+#if config.cut_char_level:
+stopwords = [u'？', u'。', u'，',]
 
 
 
 
 def clean_str(x):
-    punc = "！？。 ＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏."
+    punc = "蚂蚁  了 吗  的 ！？。，：；."
     punc = punc.decode("utf-8")
     return re.sub(ur"[%s]+" %punc, "", x)
 
@@ -32,7 +32,11 @@ def cut_single(x,cut_char_level):
         setence_seged = list(x.strip())
         #print(setence_seged)
     else:
-        setence_seged = jieba.cut(x.strip())
+        setence_seged = jieba.cut(x.strip(), HMM=True)
+        #setence_seged=jieba.cut_for_search(x.strip(),HMM=Truec)
+
+        #import jieba.analyse
+        #setence_seged = jieba.analyse.extract_tags(x.strip(),topK=5,withWeight=False,allowPOS=['n','v'])
 
     for word in setence_seged:
         if word not in stopwords:

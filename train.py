@@ -26,9 +26,9 @@ from sklearn.model_selection import train_test_split
 import keras.backend as K
 from keras.callbacks import TensorBoard
 from keras.callbacks import Callback
-
+from keras.callbacks import TensorBoard
 sys.path.append('models')
-from CNN import cnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM
+from CNN import cnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM,ABCNN2
 from ESIM import esim, decomposable_attention
 from ABCNN import ABCNN
 from bimpm import bimpm
@@ -54,6 +54,7 @@ def load_data():
 
 def train(x_train, y_train,x_dev, y_dev,model_name, model):
     for i in range(15):
+        K.set_value(model.optimizer.lr, 0.005)
         if i == 9:
             K.set_value(model.optimizer.lr, 0.0001)
 
@@ -63,6 +64,8 @@ def train(x_train, y_train,x_dev, y_dev,model_name, model):
             steps_per_epoch=int(y_train.shape[0] / config.batch_size),
             validation_data=(x_dev, y_dev),
             class_weight={0: 1, 1: 4},
+            callbacks=[TensorBoard(log_dir='data/log_dir')],
+            verbose=1,
 
         )
         pred = model.predict(x_dev, batch_size=config.batch_size)
@@ -111,10 +114,10 @@ def main(model_name):
         model = decomposable_attention()
     if model_name == 'abcnn':
 
-        model = ABCNN(
+        model = ABCNN2(
             left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=3,
             nb_filter=100, filter_widths=[5,4,3],
-            collect_sentence_representations=True, abcnn_1=True, abcnn_2=True,
+            collect_sentence_representations=True, abcnn_1=True, abcnn_2=False,
             #mode="euclidean",
             mode="cos",
             #mode='dot'

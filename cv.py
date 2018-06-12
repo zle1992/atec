@@ -28,7 +28,7 @@ from keras.callbacks import TensorBoard
 from keras.callbacks import Callback
 from keras.activations import softmax
 sys.path.append('models')
-from CNN import cnn_v1, cnn_v2, model_conv1D_, Siamese_LSTM, drmm_tks
+from CNN import cnn_v1, cnn_v2, model_conv1D_, Siamese_LSTM
 from ESIM import esim, decomposable_attention
 from ABCNN import ABCNN
 from bimpm import bimpm
@@ -53,21 +53,30 @@ def load_data():
     return x_train, y_train
 
 
-def make_train_cv_data(X_train, Y_train, model, model_name, epoch_nums, kfolds):
+def make_train_cv_data(X_train, Y_train, Model, model_name, epoch_nums, kfolds):
+
+    from keras.models import model_from_json
+
+    json_string = Model.to_json()
 
     S_train = np.zeros((Y_train.shape[0], epoch_nums))
     S_Y = np.zeros((Y_train.shape[0], 1))
 
     train_df = pd.DataFrame()
     X, Y = X_train, Y_train
-
-    for epoch_num in range(epoch_nums):
-        p, r, f = [], [], []
-        from sklearn.model_selection import KFold
-        kf = KFold(n_splits=kfolds, shuffle=True)
-        k = 0
-        for train_index, test_index in kf.split(Y):
-            k += 1
+    from sklearn.model_selection import KFold
+    kf = KFold(n_splits=kfolds, shuffle=True)
+    k = 0
+       
+    epoch_nums =1 
+    p, r, f = [], [], []    
+    for train_index, test_index in kf.split(Y):
+        k += 1
+        model = model_from_json(json_string)
+        model.compile(loss='binary_crossentropy',
+                  optimizer='adam', metrics=['acc'])
+        K.set_value(model.optimizer.lr, 0.005)
+        for epoch_num in range(epoch_nums):
             
             if config.feats == []:
                 x_train = [X[0][train_index, :], X[1][train_index, :], X[2][train_index]]
@@ -86,7 +95,7 @@ def make_train_cv_data(X_train, Y_train, model, model_name, epoch_nums, kfolds):
 
             model.fit_generator(
                 train_batch_generator3(x_train, y_train, config.batch_size),
-                epochs=1,
+                epochs=5,
                 steps_per_epoch=int(y_train.shape[0] / config.batch_size),
                 validation_data=(x_dev, y_dev),
                 class_weight={0: 1, 1: 4},
@@ -94,22 +103,23 @@ def make_train_cv_data(X_train, Y_train, model, model_name, epoch_nums, kfolds):
             )
             pred = model.predict(x_dev, batch_size=config.batch_size)
             pre, rec, f1 = score(y_dev, pred)
-            p.append(pre)
-            r.append(rec)
-            f.append(f1)
+            
 
             S_train[test_index, epoch_num] = pred[:, 1]
             print('p r f1 ', pre, rec, f1)
             train_df['epoch_{0}'.format(epoch_num)] = S_train[:, epoch_num]
             train_df['label'] = Y_train[:, 1]
-        print('p r f1 ')
-        print(np.array([p, r, f, ]).T)
-        print('mean :', np.mean(np.array(p)),
-              np.mean(np.array(r)), np.mean(np.array(f)))
+            p.append(pre)
+            r.append(rec)
+            f.append(f1)
+        
         model.save(config.stack_path+"_%s_%s.h5" %
-                   (model_name, epoch_num))
-
-    train_df.to_csv(config.stack_path+'train_%s.csv' % (model_name),
+                   (model_name, k))
+    print('p r f1 ')
+    print(np.array([p, r, f, ]).T)
+    print('mean :', np.mean(np.array(p)),
+              np.mean(np.array(r)), np.mean(np.array(f)))
+    train_df.to_csv(config.stack_path+'train_%s.csv' % (k),
                     index=False, )
 
 
@@ -147,7 +157,7 @@ def main(model_name):
             mode="cos",
             # mode='dot'
         )
-    do_train_cv(model_name, model, epoch_nums=2, kfolds=3)
+    do_train_cv(model_name, model, epoch_nums=1, kfolds=5)
     #train(x_train, y_train, x_dev, y_dev, model_name, model)
 
 if __name__ == '__main__':

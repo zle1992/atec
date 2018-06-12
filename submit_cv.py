@@ -35,36 +35,7 @@ def load_data(in_path):
     return data
 
 
-def main(in_path, out_path):
 
-    for file in os.listdir('./'):
-        if file.endswith('.h5'):
-            model_path = file
-    data = load_data(in_path)
-    X, _ = get_X_Y_from_df(data, False, False)
-    if config.feats == []:
-        X = X[:2]
-
-    print('load model and predict')
-    model = load_model(model_path, custom_objects={"softmax": softmax})
-    test_pred = model.predict(X, batch_size=config.batch_size)
-    print('save submit file')
-    data['label'] = [int(x > 0.5) for x in test_pred[:, 1]]
-    data[['id', 'label']].to_csv(out_path, index=False, header=None, sep='\t')
-
-
-def main_test(model_path):
-    in_path = 'submit/a.csv'
-    out_path = 'submit/{0}.csv'.format(model_path.split('/')[-1])
-
-    X, _ = get_X_Y_from_df(data, False, False)
-    if config.feats == []:
-        X = X[:2]
-    model = load_model(model_path, custom_objects={"softmax": softmax})
-    test_pred = model.predict(X, batch_size=config.batch_size)
-    print('save submit file')
-    data['label'] = [int(x > 0.5) for x in test_pred[:, 1]]
-    data[['id', 'label']].to_csv(out_path, index=False, header=None, sep='\t')
 
 
 def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
@@ -76,7 +47,7 @@ def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
             print('kf: ', kf)
             print('epoch_num: ', epoch_num + 1)
             model = load_model(config.stack_path+"_%s_%s.h5" %
-                               (model_name, epoch_num), custom_objects={"softmax": softmax})
+                               (model_name, kf), custom_objects={"softmax": softmax})
             pred = model.predict(X_dev, batch_size=config.batch_size)
 
             S_test[:, epoch_num] += pred[:, 1]
@@ -95,12 +66,10 @@ def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
 def do_cv_test(in_path, out_path):
 
     model_name = 'cnn'
-    epoch_nums = 5
+    epoch_nums = 1
     kfolds = 5
     data = load_data(in_path)
     X, _ = get_X_Y_from_df(data, False, False)
-    if config.feats == []:
-        X = X[:2]
     pred = make_test_cv_data(X, model_name, epoch_nums, kfolds)
     data['label'] = [int(x > 0.5) for x in pred]
     data[['id', 'label']].to_csv(out_path, index=False, header=None, sep='\t')
@@ -109,4 +78,4 @@ def do_cv_test(in_path, out_path):
 if __name__ == '__main__':
     #main(sys.argv[1], sys.argv[2])
     do_cv_test(sys.argv[1],sys.argv[2])
-    main_test(sys.argv[1])
+    # main_test(sys.argv[1])
