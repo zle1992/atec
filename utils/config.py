@@ -60,10 +60,12 @@ data_augment = True
 # w2v_pre_train_dict = 'data/pre_w2v/sgns.zhihu.word'
 # data_hdf = 'data/atec_nlp_sim_train_pre_train.hdf'
 
-
-feats =[]
-#[u'q1_freq', u'q2_freq', u'freq_mean', u'freq_cross', u'q1_freq_sq',
-#        u'q2_freq_sq']
+nofeats = True
+if nofeats:
+    feats =[u'pading1',u'pading2']
+else:
+    feats=[u'q1_freq', u'q2_freq', u'freq_mean', u'freq_cross', u'q1_freq_sq',
+        u'q2_freq_sq']
 
 # 'bin_dist1',
 #  'bin_dist2',

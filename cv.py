@@ -26,19 +26,19 @@ from sklearn.model_selection import train_test_split
 import keras.backend as K
 from keras.callbacks import TensorBoard
 from keras.callbacks import Callback
-from keras.activations import softmax
+from keras.callbacks import TensorBoard
 sys.path.append('models')
-from CNN import cnn_v1, cnn_v2, model_conv1D_, Siamese_LSTM
+from CNN import cnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM,ABCNN2
 from ESIM import esim, decomposable_attention
 from ABCNN import ABCNN
 from bimpm import bimpm
+from MatchZoo import *
 sys.path.append('utils/')
 sys.path.append('feature/')
 import config
-from Feats import data_2id, add_hum_feats
-from help import score, train_batch_generator, train_batch_generator3, train_test, get_X_Y_from_df
-from CutWord import read_cut, more
-
+from Feats import data_2id,add_hum_feats
+from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
+from CutWord import read_cut,more
 
 def load_data():
     path = config.origin_csv
@@ -53,7 +53,7 @@ def load_data():
     return x_train, y_train
 
 
-def make_train_cv_data(X_train, Y_train, Model, model_name, epoch_nums, kfolds):
+def make_train_cv_data(X_train, Y_train, Model, model_name, epoch_nums, kfolds,lr):
 
     from keras.models import model_from_json
 
@@ -72,19 +72,13 @@ def make_train_cv_data(X_train, Y_train, Model, model_name, epoch_nums, kfolds):
     p, r, f = [], [], []    
     for train_index, test_index in kf.split(Y):
         k += 1
-        model = model_from_json(json_string)
+        model = model_from_json(json_string, custom_objects={"softmax": softmax})
         model.compile(loss='binary_crossentropy',
                   optimizer='adam', metrics=['acc'])
-        K.set_value(model.optimizer.lr, 0.005)
-        for epoch_num in range(epoch_nums):
-            
-            if config.feats == []:
-                x_train = [X[0][train_index, :], X[1][train_index, :], X[2][train_index]]
-                x_dev = [X[0][test_index, :], X[1][test_index, :],X[2][test_index]] 
-            else:
-                
-                x_train = [X[0][train_index, :], X[1][train_index, :], X[2][train_index, :]]
-                x_dev = [X[0][test_index, :], X[1][test_index, :],X[2][test_index, :]]       
+        K.set_value(model.optimizer.lr, lr)
+        for epoch_num in range(epoch_nums):   
+            x_train = [X[0][train_index, :], X[1][train_index, :], X[2][train_index, :]]
+            x_dev = [X[0][test_index, :], X[1][test_index, :],X[2][test_index, :]]       
             y_train=Y[train_index,:]
             y_dev = Y[test_index, :]
             print('kf: ', k)
@@ -95,7 +89,7 @@ def make_train_cv_data(X_train, Y_train, Model, model_name, epoch_nums, kfolds):
 
             model.fit_generator(
                 train_batch_generator3(x_train, y_train, config.batch_size),
-                epochs=5,
+                epochs=8,
                 steps_per_epoch=int(y_train.shape[0] / config.batch_size),
                 validation_data=(x_dev, y_dev),
                 class_weight={0: 1, 1: 4},
@@ -123,12 +117,13 @@ def make_train_cv_data(X_train, Y_train, Model, model_name, epoch_nums, kfolds):
                     index=False, )
 
 
-def do_train_cv(model_name, model, epoch_nums, kfolds):
+def do_train_cv(model_name, model, epoch_nums, kfolds,lr):
     X_train, Y_train = load_data()
-    make_train_cv_data(X_train, Y_train, model, model_name, epoch_nums, kfolds)
+    make_train_cv_data(X_train, Y_train, model, model_name, epoch_nums, kfolds,lr)
 
 
 def main(model_name):
+    lr = 0.001
     print('model name', model_name)
     if model_name == 'bimpm':
         model = bimpm()
@@ -136,7 +131,7 @@ def main(model_name):
         model = drmm_tks()
 
     if model_name == 'cnn':
-
+        lr = 0.005
         model = model_conv1D_()
     if model_name == 'slstm':
 
@@ -144,9 +139,11 @@ def main(model_name):
 
     if model_name == 'esim':
         model = esim()
+        lr = 0.001
 
     if model_name == 'dam':
         model = decomposable_attention()
+        lr = 0.001
     if model_name == 'abcnn':
 
         model = ABCNN(
@@ -157,7 +154,7 @@ def main(model_name):
             mode="cos",
             # mode='dot'
         )
-    do_train_cv(model_name, model, epoch_nums=1, kfolds=5)
+    do_train_cv(model_name, model, epoch_nums=1, kfolds=5,lr=lr)
     #train(x_train, y_train, x_dev, y_dev, model_name, model)
 
 if __name__ == '__main__':

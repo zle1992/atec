@@ -1,3 +1,3 @@
 #/bin/bash
 
-python submit.py $1 $2
+python submit_cv.py $1 $2

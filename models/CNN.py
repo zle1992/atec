@@ -53,7 +53,7 @@ def cosine_similarity( x1, x2):
         return cos
 
 
-def model_conv1D_():
+def model_conv1D_(lr=0.005):
 
     # The embedding layer containing the word vectors
     # Embedding
@@ -79,6 +79,7 @@ def model_conv1D_():
     # Define inputs
     seq1 = Input(shape=(config.word_maxlen,))
     seq2 = Input(shape=(config.word_maxlen,))
+    magic_input = Input(shape=(len(config.feats),))
 
     # Run inputs through embedding
     emb1 = emb_layer(seq1)
@@ -127,11 +128,8 @@ def model_conv1D_():
                  output_shape=(sum(nbfilters),))([mergea, mergeb])
 
     # Add the magic features
-    if len(config.feats) == 0:
-        magic_input = Input(shape=(1,))
-        
-    else:
-        magic_input = Input(shape=(len(config.feats),))
+
+    
 
   
 
@@ -186,7 +184,7 @@ def model_conv1D_():
     # model = Model(inputs=[seq1, seq2, magic_input,
     #                       distance_input], outputs=pred)
     model.compile(loss='binary_crossentropy',
-                  optimizer='adam', metrics=['acc'])
+                  optimizer=Adam(lr=lr), metrics=['acc'])
     model.summary()
     return model
 def compute_cos_match_score(l_r):

@@ -48,16 +48,24 @@ def data_2id(data):
     return data
 
 
+def pading_feats(data):
     
+    data['pading1'] = 0
+    data['pading2'] = 0
 
-def human_feats(data,outpath):
+    return data[config.feats]    
+
+def human_feats(data):
    
     
     data['q1_cut'] = data.q1_cut.map(lambda x: ' '.join(x))
     data['q2_cut'] = data.q2_cut.map(lambda x: ' '.join(x))
     
     print(data.columns)
-    data = magic1(data)
+    if config.nofeats:
+        data = pading_feats(data)
+    else:
+        data = magic1(data)
     print(data.columns)
     return data
 
@@ -66,18 +74,15 @@ def load_hum_feats(data,path):
     if os.path.exists(path):
         return pd.read_hdf(path)
     else:
-        data=human_feats(data,path)
+        data=human_feats(data)
         if path !='':
             data.to_hdf(path,'data')
         return data
 
 def add_hum_feats(data,path):
 
-    if config.feats==[]:
-            data['magic_feat'] = 0
-    else:
-        df1 = load_hum_feats(data,path)
-        data['magic_feat'] = list(df1.values)
+    df1 = load_hum_feats(data,path)
+    data['magic_feat'] = list(df1.values)
     return data
 
 # def load_final_df(data,hdf_path):

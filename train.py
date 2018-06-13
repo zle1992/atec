@@ -39,6 +39,7 @@ import config
 from Feats import data_2id,add_hum_feats
 from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
 from CutWord import read_cut,more
+
 def load_data():
     path = config.origin_csv
     print('load data')
@@ -64,7 +65,7 @@ def train(x_train, y_train,x_dev, y_dev,model_name, model):
             steps_per_epoch=int(y_train.shape[0] / config.batch_size),
             validation_data=(x_dev, y_dev),
             class_weight={0: 1, 1: 4},
-            callbacks=[TensorBoard(log_dir='data/log_dir')],
+            callbacks=[TensorBoard(log_dir='data/log_dir'),EarlyStopping(monitor='val_loss',patience=0,verbose=0,mode='auto')],
             verbose=1,
 
         )
