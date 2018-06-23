@@ -27,16 +27,11 @@ from help import get_X_Y_from_df
 import pandas as pd
 
 def load_data(in_path):
-    print('load data')
+    print('load data')  
     data = cut_word(in_path, config.cut_char_level)
     data = data_2id(data)  # 2id
-    data = add_hum_feats(data, '')  # 生成特征并加入
-
+    data = add_hum_feats(data,config.test_featdires)  # 生成特征并加入
     return data
-
-
-
-
 
 def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
     mean_epoch = False
@@ -65,7 +60,8 @@ def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
 
 def do_cv_test(in_path, out_path):
 
-    model_name = 'cnn'
+    model_name = 'esim'
+    print('model_name:',model_name)
     epoch_nums = 1
     kfolds = 5
     data = load_data(in_path)
@@ -76,6 +72,5 @@ def do_cv_test(in_path, out_path):
 
 
 if __name__ == '__main__':
-    #main(sys.argv[1], sys.argv[2])
     do_cv_test(sys.argv[1],sys.argv[2])
-    # main_test(sys.argv[1])
+ 

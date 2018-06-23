@@ -28,7 +28,7 @@ from keras.callbacks import TensorBoard
 from keras.callbacks import Callback
 from keras.callbacks import TensorBoard
 sys.path.append('models')
-from CNN import cnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM,ABCNN2
+from CNN import cnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM,ABCNN2,my_rnn
 from ESIM import esim, decomposable_attention
 from ABCNN import ABCNN
 from bimpm import bimpm
@@ -38,18 +38,18 @@ sys.path.append('feature/')
 import config
 from Feats import data_2id,add_hum_feats
 from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
-from CutWord import read_cut,more
+from CutWord import cut_word
 
 def load_data():
-    path = config.origin_csv
-    print('load data')
-    data = read_cut(path)  # cut word
+    print('load data')  
+    in_path = config.origin_csv
+    data = cut_word(in_path, config.cut_char_level)
     data = data_2id(data)  # 2id
-    data = add_hum_feats(data, config.train_feats)  # 生成特征并加入
+    data = add_hum_feats(data,config.train_featdires)  # 生成特征并加入
 
     x_train, y_train = get_X_Y_from_df(data, config.data_augment)
     print(len(x_train[2]))
-    
+
     return x_train, y_train
 
 
@@ -89,7 +89,7 @@ def make_train_cv_data(X_train, Y_train, Model, model_name, epoch_nums, kfolds,l
 
             model.fit_generator(
                 train_batch_generator3(x_train, y_train, config.batch_size),
-                epochs=8,
+                epochs=5,
                 steps_per_epoch=int(y_train.shape[0] / config.batch_size),
                 validation_data=(x_dev, y_dev),
                 class_weight={0: 1, 1: 4},
@@ -123,10 +123,14 @@ def do_train_cv(model_name, model, epoch_nums, kfolds,lr):
 
 
 def main(model_name):
-    lr = 0.001
+    lr = 0.01
     print('model name', model_name)
+    
     if model_name == 'bimpm':
         model = bimpm()
+    if model_name == 'my_rnn':
+        lr = 0.001
+        model = my_rnn()
     if model_name == 'drmmt':
         model = drmm_tks()
 
@@ -147,12 +151,14 @@ def main(model_name):
     if model_name == 'abcnn':
 
         model = ABCNN(
-            left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=3,
-            nb_filter=100, filter_widths=[5, 4, 3],
-            collect_sentence_representations=True, abcnn_1=True, abcnn_2=True,
+            left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=2,
+            nb_filter=100, filter_widths=[5, 3],
+            collect_sentence_representations=True, abcnn_1=False, abcnn_2=False,
+            #collect_sentence_representations=True, abcnn_1=True, abcnn_2=False,
             # mode="euclidean",
             mode="cos",
             # mode='dot'
+            
         )
     do_train_cv(model_name, model, epoch_nums=1, kfolds=5,lr=lr)
     #train(x_train, y_train, x_dev, y_dev, model_name, model)

@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
 import keras
 import config
+np.random.seed(seed=111)
 
 def train_batch_generator(x_source, y_source, batch):
     q1_source = x_source[0]
@@ -70,14 +71,24 @@ def score(label, pred):
     return pre_score, rec_score, f_score
 
 
-def get_X_Y_from_df(data, data_augment=True,sampling = False):
-    #data = data[:230]
+def get_X_Y_from_df(data, data_augment=True,shuffer =  True):
+    data = data[:]
+    sampling = False
     if sampling:
         data1 = data[data.label==1]
         data2 = data1.append(data1).append(data1).append(data1)
         data = data.append(data2)
-
-
+    def ss(a):
+        lens = len(a)
+        a1=[i for i in a if i!=0]
+        np.random.shuffle(a1)
+        res = a1+[0]*(lens-len(a1))
+        return res
+    if shuffer:
+        data1 = data.copy()
+        data1['q1_cut_id'] = data1['q1_cut_id'].map(lambda x:ss(x))
+        data1['q2_cut_id'] = data1['q2_cut_id'].map(lambda x:ss(x))
+        data = data.append(data1)
     data_q1 = np.array(list(data.q1_cut_id.values))
     data_q2 = np.array(list(data.q2_cut_id.values))
     magic_feat = np.array(list(data.magic_feat.values))
@@ -107,3 +118,4 @@ def train_test(data, test_size=0.1):
     test = data[int(len(data) * (1 - test_size)):]
 
     return train, test
+

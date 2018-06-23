@@ -9,7 +9,8 @@ import re
 
 sys.path.append('utils/')
 import config
-
+from pinyin import PinYin
+str2pinyin = PinYin()
 jieba.load_userdict(config.jieba_dict)
 stopwords = [line.strip() for line in open(config.stopwords_path, 'r').readlines()]
 stopwords = [w.decode('utf8') for w in stopwords]
@@ -17,7 +18,7 @@ stopwords = [w.decode('utf8') for w in stopwords]
 #if config.cut_char_level:
 stopwords = [u'？', u'。', u'，',]
 
-
+use_pinyin =False
 
 
 def clean_str(x):
@@ -37,10 +38,13 @@ def cut_single(x,cut_char_level):
 
         #import jieba.analyse
         #setence_seged = jieba.analyse.extract_tags(x.strip(),topK=5,withWeight=False,allowPOS=['n','v'])
-
+    
     for word in setence_seged:
         if word not in stopwords:
-            res.append(word)
+            my_word = word
+            if use_pinyin:
+                my_word = str2pinyin.char2pinyin(my_word)
+            res.append(my_word)
             
     return res
 
@@ -88,6 +92,7 @@ def cut_word(path,cut_char_level):
 
     data = pd.read_csv(path, sep='\t', encoding='utf8',#nrows=1000,
                        names=['id', 'q1', 'q2', 'label'])
+    #data['id'] = range(len(data))#重塑id
     data['label'] = data['label'].fillna(0)
     data['q1_cut'] = data['q1'].map(lambda x: cut_single(x,cut_char_level))
     data['q2_cut'] = data['q2'].map(lambda x: cut_single(x,cut_char_level))

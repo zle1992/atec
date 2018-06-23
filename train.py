@@ -28,7 +28,7 @@ from keras.callbacks import TensorBoard
 from keras.callbacks import Callback
 from keras.callbacks import TensorBoard
 sys.path.append('models')
-from CNN import cnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM,ABCNN2
+from CNN import rnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM,ABCNN2
 from ESIM import esim, decomposable_attention
 from ABCNN import ABCNN
 from bimpm import bimpm
@@ -45,18 +45,18 @@ def load_data():
     print('load data')
     data = read_cut(path)  #cut word
     data = data_2id(data)  # 2id
-    data = add_hum_feats(data,config.train_feats) #生成特征并加入
+    data = add_hum_feats(data,config.train_featdires) #生成特征并加入
     train, dev = train_test(data)
-    x_train, y_train = get_X_Y_from_df(train, config.data_augment,False)
+    x_train, y_train = get_X_Y_from_df(train, config.data_augment,config.shuffer)
     x_dev, y_dev = get_X_Y_from_df(dev, False,False)
     print('train shape', x_train[0].shape)
     print('dev shape', x_dev[0].shape)
     return x_train, y_train,x_dev, y_dev
 
 def train(x_train, y_train,x_dev, y_dev,model_name, model):
-    for i in range(15):
+    for i in range(20):
         K.set_value(model.optimizer.lr, 0.005)
-        if i == 9:
+        if i == 15:
             K.set_value(model.optimizer.lr, 0.0001)
 
         model.fit_generator(
@@ -65,7 +65,7 @@ def train(x_train, y_train,x_dev, y_dev,model_name, model):
             steps_per_epoch=int(y_train.shape[0] / config.batch_size),
             validation_data=(x_dev, y_dev),
             class_weight={0: 1, 1: 4},
-            callbacks=[TensorBoard(log_dir='data/log_dir'),EarlyStopping(monitor='val_loss',patience=0,verbose=0,mode='auto')],
+#            callbacks=[TensorBoard(log_dir='data/log_dir'),EarlyStopping(monitor='val_loss',patience=0,verbose=0,mode='auto')],
             verbose=1,
 
         )
@@ -74,14 +74,14 @@ def train(x_train, y_train,x_dev, y_dev,model_name, model):
         
         pre, rec, f1 = score(y_dev, pred)
 
-        np.save(config.model_dir + "/val_pred_%s_%s.npz" %
-                   (model_name, f1),np.array(pred))
-        np.save(config.model_dir + "/train_pred_%s_%s.npz" %
-                   (model_name, f1),np.array(pred_train))
+        # np.save(config.model_dir + "/val_pred_%s_%s.npz" %
+        #            (model_name, f1),np.array(pred))
+        # np.save(config.model_dir + "/train_pred_%s_%s.npz" %
+        #            (model_name, f1),np.array(pred_train))
 
         
-        model.save(config.model_dir + "/dp_embed_%s_%s.h5" %
-                   (model_name, f1))
+        model.save(config.model_dir + "/dp_feats_%d_embed_%s_%s.h5" %
+                   (len(config.feats),model_name, f1))
         print('p r f1 ', pre, rec, f1)
 
 
@@ -104,6 +104,9 @@ def main(model_name):
     if model_name == 'cnn':
 
         model = model_conv1D_()
+    if model_name == 'rnn':
+
+        model = rnn_v1()
     if model_name == 'slstm':
 
         model = Siamese_LSTM()
@@ -115,7 +118,7 @@ def main(model_name):
         model = decomposable_attention()
     if model_name == 'abcnn':
 
-        model = ABCNN2(
+        model = ABCNN(
             left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=3,
             nb_filter=100, filter_widths=[5,4,3],
             collect_sentence_representations=True, abcnn_1=True, abcnn_2=False,

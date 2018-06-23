@@ -13,7 +13,7 @@ import config
 
 def compute_cos_match_score(l_r):
     l, r = l_r
-    return K.batch_dot(
+    return 1-K.batch_dot(
         K.l2_normalize(l, axis=-1),
         K.l2_normalize(r, axis=-1),
         axes=[2, 2]
@@ -32,6 +32,7 @@ def compute_euclidean_match_score(l_r):
 
 
 
+
 def MatchScore(l, r, mode="euclidean"):
     if mode == "euclidean":
         return merge(
@@ -47,6 +48,7 @@ def MatchScore(l, r, mode="euclidean"):
         )
     elif mode == "dot":
         return merge([l, r], mode="dot")
+
     else:
         raise ValueError("Unknown match score mode %s" % mode)
 
@@ -58,6 +60,10 @@ def convs_block(data, convs=[3, 4, 5], f=256):
         pool = GlobalMaxPool1D()(conv)
         pools.append(pool)
     return concatenate(pools)
+
+
+
+
 def ABCNN(
     left_seq_len, right_seq_len, nb_filter, filter_widths,
     depth=2, dropout=0.5, abcnn_1=True, abcnn_2=True, collect_sentence_representations=False, mode="euclidean", batch_normalize=True
@@ -77,7 +83,8 @@ def ABCNN(
         magic_input = Input(shape=(1,))
     else:
         magic_input = Input(shape=(len(config.feats),))
-
+    magic_dense = BatchNormalization()(magic_input)
+    magic_dense = Dense(64, activation='relu')(magic_dense)
 
     left_input = Input(shape=(left_seq_len, ))
     right_input = Input(shape=(right_seq_len,))
@@ -85,8 +92,13 @@ def ABCNN(
     # Embedding
     pretrained_weights = np.load(config.word_embed_weight)
     in_dim, out_dim = pretrained_weights.shape
+
+
+
     embedding = Embedding(in_dim, out_dim, weights=[
                           pretrained_weights], trainable=True,)
+
+
     left_embed = embedding(left_input)
     right_embed = embedding(right_input)
 
@@ -124,12 +136,12 @@ def ABCNN(
                             mode="concat", concat_axis=1)
 
         # # Padding so we have wide convolution
-        # left_embed_padded = ZeroPadding2D((filter_width - 1, 0))(left_embed)
-        # right_embed_padded = ZeroPadding2D((filter_width - 1, 0))(right_embed)
+        left_embed_padded = ZeroPadding2D((filter_width - 1, 0))(left_embed)
+        right_embed_padded = ZeroPadding2D((filter_width - 1, 0))(right_embed)
 
        
-        left_embed_padded = left_embed
-        right_embed_padded = right_embed
+        # left_embed_padded = left_embed
+        # right_embed_padded = right_embed
 
         # 2D convolutions so we have the ability to treat channels.
         # Effectively, we are still doing 1-D convolutions.
@@ -153,12 +165,12 @@ def ABCNN(
 
     else:
         # Padding so we have wide convolution
-        left_embed_padded = ZeroPadding1D(filter_width - 1)(left_embed)
-        right_embed_padded = ZeroPadding1D(filter_width - 1)(right_embed)
+        left_embed_padded = ZeroPadding1D(filter_width - 5)(left_embed)
+        right_embed_padded = ZeroPadding1D(filter_width - 5)(right_embed)
         conv_left = Convolution1D(
-            nb_filter, filter_width, activation="tanh", border_mode="same")(left_embed_padded)
+            nb_filter, filter_width, activation="tanh", border_mode="valid")(left_embed_padded)
         conv_right = Convolution1D(
-            nb_filter, filter_width, activation="tanh", border_mode="same")(right_embed_padded)
+            nb_filter, filter_width, activation="tanh", border_mode="valid")(right_embed_padded)
 
     
         conv_left = BatchNormalization()(conv_left)
@@ -259,7 +271,16 @@ def ABCNN(
         [left_sentence_rep, right_sentence_rep], mode="concat")
     global_representation = Dropout(dropout)(global_representation)
 
-    # Add logistic regression on top.
+    diff_mul =True
+    if diff_mul:
+        # Add logistic regression on top.
+        diff = Lambda(lambda x: K.abs(
+            x[0] - x[1]), output_shape=(left_sentence_rep._keras_shape[1],))([left_sentence_rep, right_sentence_rep])
+        mul = Lambda(lambda x: x[0] * x[1],
+                 output_shape=(left_sentence_rep._keras_shape[1],))([left_sentence_rep, right_sentence_rep])
+        global_representation =  merge([diff,mul,magic_dense],mode="concat")
+    else:
+        global_representation =  merge([magic_dense,global_representation],mode="concat")
     classify = Dense(2, activation="sigmoid")(global_representation)
 
     model = Model([left_input, right_input,magic_input], output=classify)

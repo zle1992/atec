@@ -8,64 +8,42 @@ w2v_vec_dim = 256
 word_maxlen = 40
 
 
-
-
- 
-                
 model_dir = '../model_dir'
 jieba_dict = 'data/share/jieba/jieba_dict.txt'
 stopwords_path = 'data/share/jieba/stops.txt'
 origin_csv = 'data/data/atec_nlp_sim_train.csv'
 
 data_augment = True
-#data_augment = False
+shuffer = True
 
 
-
-
-
-#最原始
-# use_pre_train = False
-#cut_char_level = False
-# word_embed_weight = 'data/word_embed_weight_.npy'
-# w2v_content_word_model = 'data/train_w2v.model'
-# data_hdf = 'data/atec_nlp_sim_train.hdf'
-
-#自定义词典+停用词过滤
-
-
-# use_pre_train = False
-# cut_char_level = False
-# data_hdf = 'data/atec_nlp_sim_train2.hdf'
-# data_cut_hdf ='data/atec_cut.hdf'
-# data_feat_hdf = 'data/atec_nlp_sim_train2_magic.hdf'
-# word_embed_weight = 'data/word_embed_weight_2.npy'
-# w2v_content_word_model = 'data/train_w2v2.model'
-
-
-# char
-
-# use_pre_train = False
-# cut_char_level = True
-# word_embed_weight = 'data/word_embed_weight_char.npy'
-# w2v_content_word_model = 'data/train_w2v_char.model'
-# data_hdf = 'data/atec_nlp_sim_train_char.hdf'
-
-
-
-# use_pre_train = True
-# cut_char_level = False
-# word_embed_weight = 'data/pre_w2v/my_embeding.npy'
-# word_embed_vocab = 'data/pre_w2v/my_vovab.npy'
-# w2v_pre_train_dict = 'data/pre_w2v/sgns.zhihu.word'
-# data_hdf = 'data/atec_nlp_sim_train_pre_train.hdf'
-
-nofeats = True
+nofeats = False
 if nofeats:
-    feats =[u'pading1',u'pading2']
+    feats = [u'pading1', u'pading2']
 else:
-    feats=[u'q1_freq', u'q2_freq', u'freq_mean', u'freq_cross', u'q1_freq_sq',
-        u'q2_freq_sq']
+    feats = [u'q1_freq', u'q2_freq', u'freq_mean', u'freq_cross', u'q1_freq_sq',
+             u'q2_freq_sq',
+             u'len_diff',
+             u'shingle_similarity_1',
+             u'shingle_similarity_2',
+             u'shingle_similarity_3',
+             u'common_words',
+             'cwc_min',
+             'cwc_max',
+             'csc_min',
+             'csc_max',
+             'ctc_min',
+             'ctc_max',
+             'last_word_eq',
+             'first_word_eq',
+             'abs_len_diff',
+             'mean_len',
+             'token_set_ratio',
+             'token_sort_ratio',
+             'fuzz_ratio',
+             'fuzz_partial_ratio',
+             'longest_substr_ratio']
+
 
 # 'bin_dist1',
 #  'bin_dist2',
@@ -105,44 +83,32 @@ else:
 #  'q2_sum2',
 #  'q2_uni1',
 #  'q2_uni2',
- 
-
 
 
 use_pre_train = False
 
-# cut_char_level = False
-# data_cut_hdf ='data/cache/train_cut_word.hdf'
-# train_feats = 'data/cache/train_feats_word.hdf'
-# test_feats= 'data/cache/test_feats_word.hdf'
-# data_feat_hdf = 'data/cache/train_magic_word.hdf'
-# train_df= 'data/cache/train_magic_word_train_f{0}.hdf'.format(len(feats))
-# dev_df = 'data/cache/train_magic_word_more_dev_f{0}.hdf'.format(len(feats))
-
-# word_embed_weight = 'data/my_w2v/word_embed_weight_word.npy'
-# w2v_content_word_model = 'data/my_w2v/train_word.model'
-
-# use_pre_train = False
-# cut_char_level = False
-# data_cut_hdf ='data/cache/train_cut_word.hdf'
-# train_feats = 'data/cache/train_feats_word.hdf'
-# data_feat_hdf = 'data/cache/train_magic_word.hdf'
-# train_df= 'data/cache/train_magic_word_train_f{0}.hdf'.format(len(feats))
-# dev_df = 'data/cache/train_magic_word_more_dev_f{0}.hdf'.format(len(feats))
-
-# word_embed_weight = 'data/share/my_w2v/word_embed_weight_word.npy'
-# w2v_content_word_model = 'data/share/my_w2v/train_word.model'
 
 cut_char_level = True
-data_cut_hdf ='data/cache/train_cut_char.hdf'
-train_feats = 'data/cache/train_feats_char.hdf'
-data_feat_hdf = 'data/cache/train_magic_char.hdf'
-train_df= 'data/cache/train_magic_char_train_f{0}.hdf'.format(len(feats))
-dev_df = 'data/cache/train_magic_char_more_dev_f{0}.hdf'.format(len(feats))
 
-word_embed_weight = 'data/share/my_w2v/word_embed_weight_char.npy'
-w2v_content_word_model = 'data/share/my_w2v/train_char.model'
+if cut_char_level:
 
+    data_cut_hdf = 'data/cache/train_cut_char.hdf'
+    train_feats = 'data/cache/train_feats_char.hdf'
+    data_feat_hdf = 'data/cache/train_magic_char.hdf'
+    train_df = 'data/cache/train_magic_char_train_f{0}.hdf'.format(len(feats))
+    dev_df = 'data/cache/train_magic_char_more_dev_f{0}.hdf'.format(len(feats))
+
+    word_embed_weight = 'data/share/my_w2v/word_embed_weight_char.npy'
+    w2v_content_word_model = 'data/share/my_w2v/train_char.model'
+else:
+    data_cut_hdf = 'data/cache/train_cut_word.hdf'
+    train_feats = 'data/cache/train_feats_word.hdf'
+    data_feat_hdf = 'data/cache/train_magic_word.hdf'
+    train_df = 'data/cache/train_magic_word_train_f{0}.hdf'.format(len(feats))
+    dev_df = 'data/cache/train_magic_word_more_dev_f{0}.hdf'.format(len(feats))
+
+    word_embed_weight = 'data/share/my_w2v/word_embed_weight_word.npy'
+    w2v_content_word_model = 'data/share/my_w2v/train_word.model'
 
 
 if cut_char_level:
@@ -151,16 +117,11 @@ else:
     stack_path = 'data/share/stack/word_'
 
 
+train_featdires = ['data/feats0_train.csv',
+                  'data/feats1_train.csv',
+                  'data/feats2_train.csv',
+                  ]
 
-
-
-
-
-
-
-
-
-
-
-
-
+test_featdires = ['data/share/feats0_test.csv',
+                  'data/share/feats1_test.csv',
+                  'data/share/feats2_test.csv']
