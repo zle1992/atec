@@ -11,7 +11,7 @@ word_maxlen = 40
 model_dir = '../model_dir'
 jieba_dict = 'data/share/jieba/jieba_dict.txt'
 stopwords_path = 'data/share/jieba/stops.txt'
-origin_csv = 'data/data/atec_nlp_sim_train.csv'
+origin_csv = 'data/data/atec_nlp_sim_train2.csv'
 
 data_augment = True
 shuffer = True

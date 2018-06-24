@@ -19,36 +19,22 @@ from time import time
 sys.path.append('utils/')
 sys.path.append('feature/')
 import config
-from Feats import data_2id,load_hum_feats
+from Feats import data_2id,human_feats
 from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
 from CutWord import read_cut,more
 path = config.origin_csv
 print('load data')
 data = read_cut(path)  #cut word
-data = data_2id(data)  # 2id
+#data = data_2id(data)  # 2id
 label = data.label                  
-data = load_hum_feats(data,config.train_feats)
-
+data = human_feats(data)
 
 data['label'] = label
 
-train, dev = train_test(data)
-x_train, x_dev = train[config.feats],dev[config.feats]
 
-x_dev['cnn1']=np.load(config.model_dir + '/val_pred_cnn_0.531129240017.npz.npy')[:,1]
-
-x_train['cnn1']= np.load(config.model_dir + '/train_pred_cnn_0.531129240017.npz.npy')[:len(x_train),1]
-
-y_train, y_dev = train.label,dev.label
-print('train ssshape', x_train.shape)
-print('dev ssshape', x_dev.shape)
-
-
-# Train model
-X_train = x_train
-Y_train = y_train
-X_valid = x_dev
-Y_valid = y_dev
+X_train, X_valid, Y_train, Y_valid = train_test_split(
+data.drop(columns=['label']),data.label, test_size=0.2, random_state=42)
+print(list(X_train))
 
 # Set our parameters for xgboost
 params = {}
@@ -72,3 +58,11 @@ print(sum(pred))
 print(sum(Y_valid))
 pre, rec, f1 = score(Y_valid, pred)
 print('p r f1 ', pre, rec, f1)
+
+feature_score = bst.get_fscore()
+feature_score = sorted(feature_score.items(), key=lambda x:x[1],reverse=True)
+f = []
+for k,v in feature_score:
+    f.append(k)
+print(f)
+print(feature_score)
