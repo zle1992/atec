@@ -20,13 +20,9 @@ from keras.optimizers import *
 
 import config
 np.random.seed(2018)
-def create_pretrained_embedding(pretrained_weights_path, trainable=False, **kwargs):
-    "Create embedding layer from a pretrained weights array"
-    pretrained_weights = np.load(pretrained_weights_path)
-    in_dim, out_dim = pretrained_weights.shape
-    embedding = Embedding(in_dim, out_dim, weights=[
-                          pretrained_weights], trainable=True, **kwargs)
-    return embedding
+sys.path.append('models/layers/')
+from MyEmbeding import create_pretrained_embedding
+
 
 def bimpm():
     print('--- Building model...')

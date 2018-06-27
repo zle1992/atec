@@ -28,7 +28,7 @@ import pandas as pd
 
 def load_data(in_path):
     print('load data')  
-    data = cut_word(in_path, config.cut_char_level)
+    data = cut_word(in_path)
     data = data_2id(data)  # 2id
     data = add_hum_feats(data,config.test_featdires)  # 生成特征并加入
     return data
@@ -42,7 +42,7 @@ def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
             print('kf: ', kf)
             print('epoch_num: ', epoch_num + 1)
             model = load_model(config.stack_path+"_%s_%s.h5" %
-                               (model_name, kf), custom_objects={"softmax": softmax})
+                               (model_name, kf), custom_objects=config.CustomObjects)
             pred = model.predict(X_dev, batch_size=config.batch_size)
 
             S_test[:, epoch_num] += pred[:, 1]
@@ -60,7 +60,7 @@ def make_test_cv_data(X_dev, model_name, epoch_nums, kfolds):
 
 def do_cv_test(in_path, out_path):
 
-    model_name = 'esim'
+    model_name = 'cnn'
     print('model_name:',model_name)
     epoch_nums = 1
     kfolds = 5

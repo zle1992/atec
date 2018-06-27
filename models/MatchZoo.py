@@ -33,30 +33,19 @@ sys.path.append('models/layers/')
 from MatchTensor import *
 from SpatialGRU import *
 from Match      import *
-def create_pretrained_embedding(pretrained_weights_path, trainable=False, **kwargs):
-    "Create embedding layer from a pretrained weights array"
-    pretrained_weights = np.load(pretrained_weights_path)
-    in_dim, out_dim = pretrained_weights.shape
-    embedding = Embedding(in_dim, out_dim, weights=[
-                          pretrained_weights], trainable=True, **kwargs)
-    return embedding
-
+from MyEmbeding import create_pretrained_embedding
 
 def drmm_tks(num_layer=4, hidden_sizes=[256,128,128,64],topk=20):
     emb_layer = create_pretrained_embedding(
         config.word_embed_weight, mask_zero=False)
     q1 = Input(shape=(config.word_maxlen,))
     q2 = Input(shape=(config.word_maxlen,))
-    if len(config.feats) == 0:
-        magic_input = Input(shape=(1,))
-    else:
-        magic_input = Input(shape=(len(config.feats),))
-    q1_embed = emb_layer(q1)
+    magic_input = Input(shape=(len(config.feats),))
 
+    q1_embed = emb_layer(q1)
     q2_embed = emb_layer(q2)
 
     mm = Dot(axes=[2, 2], normalize=True)([q1_embed, q2_embed])
-
     # compute term gating
     w_g = Dense(1)(q1_embed)
 
@@ -173,7 +162,7 @@ def arc2(a1d_kernel_count=256,a1d_kernel_size=3,num_conv2d_layers=1,
     return model
 
 
-def  test(alm_kernel_count=64,
+def  test0(alm_kernel_count=64,
     alm_hidden_sizes =[256,512],
         dm_kernel_count=32,
         dm_kernel_size= 3,
@@ -266,6 +255,45 @@ def  test(alm_kernel_count=64,
     
     out_ = Dense(2, activation='softmax')(out_)
     
+    model = Model(inputs=[q1, q2, magic_input], outputs=out_)
+    model.compile(loss='binary_crossentropy',
+                  optimizer='adam', metrics=['acc'])
+    model.summary()
+    return model
+
+def test():
+
+    emb_layer = create_pretrained_embedding(
+        config.word_embed_weight, mask_zero=False)
+    q1 = Input(shape=(config.word_maxlen,))
+    q2 = Input(shape=(config.word_maxlen,))
+    if len(config.feats) == 0:
+        magic_input = Input(shape=(1,))
+    else:
+        magic_input = Input(shape=(len(config.feats),))
+    q1_embed = emb_layer(q1)
+    q2_embed = emb_layer(q2)
+
+    
+
+    cross = Dot(axes=[2, 2], normalize=False)([q1_embed, q2_embed])
+    
+    cross_reshape = Reshape((config.word_maxlen, config.word_maxlen, 1))(cross)
+
+    conv2d = Conv2D(256, 3, padding='same', activation='relu')
+    
+    conv1 = conv2d(cross_reshape)
+    conv1 = MaxPooling2D()(conv1)
+    conv1 =  Conv2D(128, 3, padding='same', activation='relu')(conv1)
+    pool1 = MaxPooling2D()(conv1)
+    pool1_flat = Flatten()(conv1)
+    
+    pool1_flat_drop = Dropout(rate=0.5)(pool1_flat)
+    
+    out_ = Dense(128, activation='relu')(pool1_flat_drop)
+    out_ = Dense(2, activation='softmax')(out_)
+    
+
     model = Model(inputs=[q1, q2, magic_input], outputs=out_)
     model.compile(loss='binary_crossentropy',
                   optimizer='adam', metrics=['acc'])

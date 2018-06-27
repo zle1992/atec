@@ -32,70 +32,9 @@ import config
 sys.path.append('models/layers/')
 from MatchTensor import *
 from SpatialGRU import *
-def create_pretrained_embedding(pretrained_weights_path, trainable=False, **kwargs):
-    "Create embedding layer from a pretrained weights array"
-    pretrained_weights = np.load(pretrained_weights_path)
-    in_dim, out_dim = pretrained_weights.shape
-    embedding = Embedding(in_dim, out_dim, weights=[
-                          pretrained_weights], trainable=False, **kwargs)
-    return embedding
-
-
-
-
-
-
-
-
-
-
-
-def my_rnn():
-    emb_layer = create_pretrained_embedding(
-        config.word_embed_weight, mask_zero=False)
-    lstm_layer = LSTM(75, recurrent_dropout=0.2)
-
-    sequence_1_input = Input(shape=(config.word_maxlen,), dtype="int32")
-    embedded_sequences_1 = emb_layer(sequence_1_input)
-    x1 = lstm_layer(embedded_sequences_1)
-
-    sequence_2_input = Input(shape=(config.word_maxlen,), dtype="int32")
-    embedded_sequences_2 = emb_layer(sequence_2_input)
-    y1 = lstm_layer(embedded_sequences_2)
-
-    magic_input = Input(shape=(len(config.feats),), dtype="float32")
-    features_dense = BatchNormalization()(magic_input)
-    features_dense = Dense(2, activation="relu")(features_dense)
-    features_dense = Dropout(0.2)(features_dense)
-
-
-    
-
-    addition = add([x1, y1])
-    minus_y1 = Lambda(lambda x: -x)(y1)
-    merged = add([x1, minus_y1])
-    merged = multiply([merged, merged])
-    merged = concatenate([merged, addition])
-    merged = Dropout(0.4)(merged)
-
-    merged = concatenate([merged, features_dense])
-    merged = BatchNormalization()(merged)
-    merged = GaussianNoise(0.1)(merged)
-
-    merged = Dense(150, activation="relu")(merged)
-    merged = Dropout(0.2)(merged)
-    merged = BatchNormalization()(merged)
-
-    out = Dense(2, activation="softmax")(merged)
-
-    model = Model(inputs=[sequence_1_input, sequence_2_input, magic_input], outputs=out)
-    model.compile(loss="binary_crossentropy",
-                  optimizer="nadam", metrics=['acc'])
-    model.summary()
-    return model
-
-
-
+from MyEmbeding import create_pretrained_embedding
+from Cross import cross
+from Attention import Attention
 
 
 def cosine_similarity( x1, x2):
@@ -111,15 +50,9 @@ def cosine_similarity( x1, x2):
         return cos
 
 
-def model_conv1D_(lr=0.005):
-
-    # The embedding layer containing the word vectors
-    # Embedding
-    emb_layer = create_pretrained_embedding(
-        config.word_embed_weight, mask_zero=False)
-    nbfilters = [128, 128, 128, 128, 32, 32]
-
-    # nbfilters=[512,512,256,128,64,32]
+def cnn_help(emb1,emb2):
+    
+    nbfilters=[256,246,256,128,64,32]
     # 1D convolutions that can iterate over the word vectors
     conv1 = Conv1D(filters=nbfilters[0], kernel_size=1,
                    padding='same', activation='relu')
@@ -134,14 +67,7 @@ def model_conv1D_(lr=0.005):
     conv6 = Conv1D(filters=nbfilters[5], kernel_size=6,
                    padding='same', activation='relu')
 
-    # Define inputs
-    seq1 = Input(shape=(config.word_maxlen,))
-    seq2 = Input(shape=(config.word_maxlen,))
-    magic_input = Input(shape=(len(config.feats),))
-
-    # Run inputs through embedding
-    emb1 = emb_layer(seq1)
-    emb2 = emb_layer(seq2)
+   
 
     # Run through CONV + GAP layers
     conv1a = conv1(emb1)
@@ -174,8 +100,8 @@ def model_conv1D_(lr=0.005):
     conv6b = conv6(emb2)
     glob6b = GlobalAveragePooling1D()(conv6b)
 
-    mergea = concatenate([glob1a, glob2a, glob3a, glob4a, glob5a, glob6a])
-    mergeb = concatenate([glob1b, glob2b, glob3b, glob4b, glob5b, glob6b])
+    mergea = concatenate([glob1a, glob2a, glob3a, glob4a, glob5a,glob6a])
+    mergeb = concatenate([glob1b, glob2b, glob3b, glob4b, glob5b,glob6b])
 
     # We take the explicit absolute difference between the two sentences
     # Furthermore we take the multiply different entries to get a different
@@ -184,52 +110,81 @@ def model_conv1D_(lr=0.005):
         x[0] - x[1]), output_shape=(sum(nbfilters),))([mergea, mergeb])
     mul = Lambda(lambda x: x[0] * x[1],
                  output_shape=(sum(nbfilters),))([mergea, mergeb])
+    add  = Lambda(lambda x: x[0] + x[1],
+                 output_shape=(sum(nbfilters),))([mergea, mergeb])
 
-    # Add the magic features
+ 
+    # merge = concatenate([mergea,mergeb,diff, mul,add])
+    cro=cross(mergea,mergeb)
+    merge = concatenate([mergea,mergeb,cro])
+    return merge
+
+
+
+def cnn_help2(emb1,emb2):
+    
+    nbfilters=[256]
+    # 1D convolutions that can iterate over the word vectors
+    conv1 = Conv1D(filters=nbfilters[0], kernel_size=2,
+                   padding='same', activation='relu')
+    
+   
+
+    # Run through CONV + GAP layers
+    conv1a = conv1(emb1)
+    glob1a = GlobalAveragePooling1D()(conv1a)
+    conv1b = conv1(emb2)
+    glob1b = GlobalAveragePooling1D()(conv1b)
 
     
+    mergea =glob1a 
+    mergeb = glob1b
+    # We take the explicit absolute difference between the two sentences
+    # Furthermore we take the multiply different entries to get a different
+    # measure of equalness
+    diff = Lambda(lambda x: K.abs(
+        x[0] - x[1]), output_shape=(sum(nbfilters),))([mergea, mergeb])
+    mul = Lambda(lambda x: x[0] * x[1],
+                 output_shape=(sum(nbfilters),))([mergea, mergeb])
+    add  = Lambda(lambda x: x[0] + x[1],
+                 output_shape=(sum(nbfilters),))([mergea, mergeb])
 
-  
+    cro=cross(mergea,mergeb)
+    merge = concatenate([mergea,mergeb,cro])
+    return merge
+def model_conv1D_(lr=0.005):
 
-    # # Add the distance features (these are now TFIDF (character and word), Fuzzy matching,
-    # # nb char 1 and 2, word mover distance and skew/kurtosis of the sentence
-    # # vector)
-    # distance_input = Input(shape=(20,))
-    # distance_dense = BatchNormalization()(distance_input)
-    # distance_dense = Dense(128, activation='relu')(distance_dense)
+ 
+    # Embedding
+    emb_layer = create_pretrained_embedding(
+        config.char_embed_weights, mask_zero=False)
 
-    # Merge the Magic and distance features with the difference layer
+    emb_layer_word = create_pretrained_embedding(
+        config.word_embed_weights, mask_zero=False)
+   
+    seq1_char = Input(shape=(config.word_maxlen,),name='q1_c')
+    seq2_char = Input(shape=(config.word_maxlen,),name='q2_c')
 
-        # , magic_dense, distance_dense])
+    seq1_word = Input(shape=(config.word_maxlen,),name='q1_w')
+    seq2_word = Input(shape=(config.word_maxlen,),name='q2_w')
+    magic_input = Input(shape=(len(config.feats),))
+
+    
+    emb1_char = emb_layer(seq1_char)
+    emb2_char = emb_layer(seq2_char)
+    
+    emb1_word = emb_layer_word(seq1_word)
+    emb2_word = emb_layer_word(seq2_word)
+
+
+    
     magic_dense = BatchNormalization()(magic_input)
-    magic_dense = Dense(64, activation='relu')(magic_dense)
-    merge = concatenate([diff, mul, magic_dense])
+    magic_dense = Dense(64, activation='elu')(magic_dense)
 
-    # compose = Bidirectional(LSTM(256))
-  
-    # q1_compare = compose(emb1)
-    # q1_compare = BatchNormalization()(q1_compare)
-    # # q1_compare = Dense(256, activation='elu')(q1_compare)
+    match_list_char = cnn_help2(emb1_char,emb2_char)
+    match_list_word = cnn_help2(emb1_word,emb2_word)
+    merge = concatenate([match_list_char,match_list_word,magic_dense])
 
-    # q2_compare = compose(emb1)
-    # q2_compare = BatchNormalization()(q2_compare)
-    # # q2_compare = Dense(256, activation='elu')(q2_compare)
-    # print(q2_compare)
-    # diff2 = Lambda(lambda x: K.abs(
-    #     x[0] - x[1]), output_shape=(512,))([q1_compare, q2_compare])
-    # mul2 = Lambda(lambda x: x[0] * x[1],
-    #              output_shape=(512,))([q1_compare, q2_compare])
-
-    # merge = concatenate([merge,diff2,mul2])
-    # # The MLP that determines the outcome
-
-
-
-
-    # cos = cosine_similarity(mergea, mergeb)
-    # print(cos)
-    # cos= Flatten()(cos)
-    # print(cos)
     x = Dropout(0.2)(merge)
     x = BatchNormalization()(x)
     x = Dense(300, activation='relu')(x)
@@ -237,14 +192,90 @@ def model_conv1D_(lr=0.005):
     x = Dropout(0.2)(x)
     x = BatchNormalization()(x)
     pred = Dense(2, activation='sigmoid')(x)
-
-    model = Model(inputs=[seq1, seq2, magic_input], outputs=pred)
-    # model = Model(inputs=[seq1, seq2, magic_input,
-    #                       distance_input], outputs=pred)
+    #model = Model(inputs=[seq1_char, seq2_char, magic_input], outputs=pred)
+    model = Model(inputs=[seq1_char, seq2_char,seq1_word,seq2_word, magic_input], outputs=pred)
     model.compile(loss='binary_crossentropy',
                   optimizer=Adam(lr=lr), metrics=['acc'])
     model.summary()
     return model
+
+
+
+
+
+def dssm(lstmsize=20):
+    # Embedding
+    emb_layer_char = create_pretrained_embedding(
+        config.char_embed_weights, trainable=True,mask_zero=False)
+
+    emb_layer_word = create_pretrained_embedding(
+        config.word_embed_weights, trainable=False,mask_zero=False)
+
+    char_weights = np.load(config.char_embed_weights)
+    word_weights = np.load(config.word_embed_weights)
+
+    input1 = Input(shape=(config.word_maxlen,))
+    input2 = Input(shape=(config.word_maxlen,))
+    input3 = Input(shape=(len(config.feats),))
+    embed1 =emb_layer_word# Embedding(word_weights.shape)
+    lstm0 = CuDNNLSTM(lstmsize,return_sequences = True)
+    lstm1 = Bidirectional(CuDNNLSTM(lstmsize))
+    lstm2 = CuDNNLSTM(lstmsize)
+    att1 = Attention(config.word_maxlen)
+    den = Dense(64,activation = 'tanh')
+
+    # att1 = Lambda(lambda x: K.max(x,axis = 1))
+    v3 = embed1(input3)
+    v1 = embed1(input1)
+    v2 = embed1(input2)
+    v11 = lstm1(v1)
+    v22 = lstm1(v2)
+    v1ls = lstm2(lstm0(v1))
+    v2ls = lstm2(lstm0(v2))
+    v1 = Concatenate(axis=1)([att1(v1),v11])
+    v2 = Concatenate(axis=1)([att1(v2),v22])
+
+    input1c = Input(shape=(config.word_maxlen,))
+    input2c = Input(shape=(config.word_maxlen,))
+    embed1c = emb_layer_char#Embedding(char_weights.shape)
+    lstm1c = Bidirectional(CuDNNLSTM(56,return_sequences = True))
+    lstm2c = Bidirectional(CuDNNLSTM(56))
+    att1c = Attention(config.word_maxlen)
+    v1c = embed1(input1c)
+    v2c = embed1(input2c)
+    v11c = lstm1c(v1c)
+    v22c = lstm1c(v2c)
+    v11c = lstm2c(v11c)
+    v22c = lstm2c(v22c)
+    v1c = Concatenate(axis=1)([att1c(v1c),v11c])
+    v2c = Concatenate(axis=1)([att1c(v2c),v22c])
+
+
+    mul = Multiply()([v1,v2])
+    sub = Lambda(lambda x: K.abs(x))(Subtract()([v1,v2]))
+    maximum = Maximum()([Multiply()([v1,v1]),Multiply()([v2,v2])])
+    mulc = Multiply()([v1c,v2c])
+    subc = Lambda(lambda x: K.abs(x))(Subtract()([v1c,v2c]))
+    maximumc = Maximum()([Multiply()([v1c,v1c]),Multiply()([v2c,v2c])])
+    sub2 = Lambda(lambda x: K.abs(x))(Subtract()([v1ls,v2ls]))
+    matchlist = Concatenate(axis=1)([mul,sub,mulc,subc,maximum,maximumc,sub2])
+    matchlist = Dropout(0.05)(matchlist)
+
+    matchlist = Concatenate(axis=1)([Dense(32,activation = 'relu')(matchlist),Dense(48,activation = 'sigmoid')(matchlist)])
+    res = Dense(2, activation = 'sigmoid')(matchlist)
+
+
+    model = Model(inputs=[input1c, input2c,input1, input2,  input3], outputs=res)
+    model.compile(optimizer=Adam(lr = 0.001), loss="binary_crossentropy", metrics=['acc'])
+    model.summary()
+    return model
+
+
+
+
+
+
+
 def compute_cos_match_score(l_r):
     l, r = l_r
     return K.batch_dot(
@@ -350,41 +381,7 @@ def ABCNN2(
         attention_right = right_reshape(attention_right)
         right_embed = right_reshape(right_embed)
 
-        # # concat attention
-        # # (samples, channels, rows, cols)
-        # left_embed = merge([left_embed, attention_left],
-        #                    mode="concat", concat_axis=1)
-        # right_embed = merge([right_embed, attention_right],
-        #                     mode="concat", concat_axis=1)
-
-        # # Padding so we have wide convolution
-        # left_embed_padded = ZeroPadding2D((filter_width - 1, 0))(left_embed)
-        # right_embed_padded = ZeroPadding2D((filter_width - 1, 0))(right_embed)
-
-       
-        # left_embed_padded = left_embed
-        # right_embed_padded = right_embed
-
-        # # 2D convolutions so we have the ability to treat channels.
-        # # Effectively, we are still doing 1-D convolutions.
-  
-        # my_conv2d = Conv2D(activation="tanh", data_format="channels_first", padding="valid", filters=nb_filter, kernel_size=(filter_width, out_dim))
-        # my_conv2d2 = Conv2D(activation="tanh", data_format="channels_first", padding="valid", filters=nb_filter, kernel_size=(filter_width, out_dim))
-        # conv_left = my_conv2d(left_embed_padded)
-        
-        # # Reshape and Permute to get back to 1-D
-        # conv_left = (Reshape((conv_left._keras_shape[1], conv_left._keras_shape[2])))(
-        #     conv_left)
-        # conv_left = Permute((2, 1))(conv_left)
-
-
-        # conv_right = my_conv2d2(right_embed_padded)
-
-        # # Reshape and Permute to get back to 1-D
-        # conv_right = (
-        #     Reshape((conv_right._keras_shape[1], conv_right._keras_shape[2])))(conv_right)
-        # conv_right = Permute((2, 1))(conv_right)
-
+   
 
     attention_left = (Reshape((attention_left._keras_shape[2], attention_left._keras_shape[3])))(attention_left)
     
@@ -457,17 +454,6 @@ def ABCNN2(
                  output_shape=(sum(nbfilters),))([mergea, mergeb])
 
 
-
-    # # Add the distance features (these are now TFIDF (character and word), Fuzzy matching,
-    # # nb char 1 and 2, word mover distance and skew/kurtosis of the sentence
-    # # vector)
-    # distance_input = Input(shape=(20,))
-    # distance_dense = BatchNormalization()(distance_input)
-    # distance_dense = Dense(128, activation='relu')(distance_dense)
-
-    # Merge the Magic and distance features with the difference layer
-
-        # , magic_dense, distance_dense])
 
 
 
@@ -572,120 +558,4 @@ def cnn_v1(seq_length, embed_weight, pretrain=False):
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam", metrics=['accuracy'])
     model.summary()
-    return model
-def rnn_v1():
-
-    # The embedding layer containing the word vectors
-    # Embedding
-    emb_layer = create_pretrained_embedding(
-        config.word_embed_weight, mask_zero=True)
-    # Define inputs
-    seq1 = Input(shape=(config.word_maxlen,))
-    seq2 = Input(shape=(config.word_maxlen,))
-    magic_input = Input(shape=(len(config.feats),))
-
-    # Run inputs through embedding
-    emb1 = emb_layer(seq1)
-    emb2 = emb_layer(seq2)
-
- 
-    magic_dense = BatchNormalization()(magic_input)
-    magic_dense = Dense(64, activation='relu')(magic_dense)
-
-
-    compose = Bidirectional(GRU(256,return_sequences=True))
-    compose2 = Bidirectional(GRU(256,return_sequences=False))
-  
-  
-    q1_compare = compose(emb1)
-    q1_compare = BatchNormalization()(q1_compare)
-    q1_compare = compose2(q1_compare)
-    q1_compare = BatchNormalization()(q1_compare)
-    # q1_compare = Dense(256, activation='elu')(q1_compare)
-
-    q2_compare = compose(emb1)
-    q2_compare = BatchNormalization()(q2_compare)
-    q2_compare = compose2(q2_compare)
-    q2_compare = BatchNormalization()(q2_compare)
-    # q2_compare = Dense(256, activation='elu')(q2_compare)
-   
-    diff = Lambda(lambda x: K.abs(
-        x[0] - x[1]), output_shape=(512,))([q1_compare, q2_compare])
-    mul = Lambda(lambda x: x[0] * x[1],
-                 output_shape=(512,))([q1_compare, q2_compare])
-
-    merge = concatenate([q1_compare,q2_compare,diff,mul])
-
-    x = Dropout(0.2)(merge)
-    x = BatchNormalization()(x)
-    x = Dense(300, activation='relu')(x)
-
-    x = Dropout(0.2)(x)
-    x = BatchNormalization()(x)
-    pred = Dense(2, activation='sigmoid')(x)
-
-    model = Model(inputs=[seq1, seq2, magic_input], outputs=pred)
-    # model = Model(inputs=[seq1, seq2, magic_input,
-    #                       distance_input], outputs=pred)
-    model.compile(loss='binary_crossentropy',
-                  optimizer=Adam(), metrics=['acc'])
-    model.summary()
-    return model
-
-def Siamese_LSTM():
-
-    # The embedding layer containing the word vectors
-    # Embedding
-    emb_layer = create_pretrained_embedding(
-        config.word_embed_weight, mask_zero=False)
-    # Model variables
-
-    n_hidden = 50
-
-    # Define the shared model
-    x = Sequential()
-    x.add(emb_layer)
-    # CNN
-    # x.add(Conv1D(250, kernel_size=5, activation='relu'))
-    # x.add(GlobalMaxPool1D())
-    # x.add(Dense(250, activation='relu'))
-    # x.add(Dropout(0.3))
-    # # x.add(Dense(1, activation='sigmoid'))
-    # # LSTM
-    x.add(GRU(n_hidden))
-
-    shared_model = x
-
-    # The visible layer
-    if config.feats == []:
-        magic_input = Input(shape=(1,))
-    else:
-        magic_input = Input(shape=(len(config.feats),))
-    left_input = Input(shape=(config.word_maxlen,), dtype='int32')
-    right_input = Input(shape=(config.word_maxlen,), dtype='int32')
-
-    # Pack it all up into a Manhattan Distance model
-    malstm_distance = Lambda(lambda x: K.exp(-K.sum(K.abs(x[0] - x[1]), axis=1, keepdims=True)), output_shape=(
-        2,))([shared_model(left_input), shared_model(right_input)])
-    #ManDist()([shared_model(left_input), shared_model(right_input)])
-
-    left = shared_model(left_input)
-    right = shared_model(right_input)
-    merge = concatenate([left, right, ])  # , magic_dense, distance_dense])
-
-    # # The MLP that determines the outcome
-    x = Dropout(0.2)(merge)
-    x = BatchNormalization()(x)
-    x = Dense(300, activation='relu')(x)
-
-    x = Dropout(0.2)(x)
-    x = BatchNormalization()(x)
-    pred = Dense(2, activation='sigmoid')(x)
-    model = Model(inputs=[left_input, right_input,
-                          magic_input], outputs=[pred])
-
-    model.compile(loss='binary_crossentropy',
-                  optimizer="adam", metrics=['acc'])
-    model.summary()
-    shared_model.summary()
     return model

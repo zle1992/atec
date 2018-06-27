@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 
-def magic1(train_in,cols=[u'q1_cut',u'q2_cut']):
+def magic1(train_in,cols=[u'q1_cut_word',u'q2_cut_word']):
     print('make feats0-------')
     # https://www.kaggle.com/jturkewitz/magic-features-0-03-gain
     train_in[cols[0]] = train_in[cols[0]].map(lambda x: ' '.join(x))

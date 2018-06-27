@@ -53,7 +53,43 @@ def train_batch_generator3(x_source, y_source, batch):
                 batch_list_x2 = []
                 batch_list_x3 = []
                 batch_list_y = []
+def train_batch_generator5(x_source, y_source, batch):
+    q1_source = x_source[0]
+    q2_source = x_source[1]
+    q3_source = x_source[2]
+    q4_source = x_source[3]
+    q5_source = x_source[4]
+    while True:
+        batch_list_x1 = []
+        batch_list_x2 = []
+        batch_list_x3 = []
+        batch_list_x4 = []
+        batch_list_x5 = []
 
+        batch_list_y = []
+        for q1, q2,q3,q4, q5, y in zip(q1_source, q2_source,q3_source,q4_source,q5_source, y_source):
+            x1 = q1.astype('float32')
+            x2 = q2.astype('float32')
+            x3 = q3.astype('float32')
+            x4 = q4.astype('float32')
+            x5 = q5.astype('float32')
+            
+            batch_list_x1.append(x1)
+            batch_list_x2.append(x2)
+            batch_list_x3.append(x3)
+            batch_list_x4.append(x4)
+            batch_list_x5.append(x5)
+
+            batch_list_y.append(y)
+            if len(batch_list_y) == batch:
+                yield ([np.array(batch_list_x1), np.array(batch_list_x2),  np.array(batch_list_x3), np.array(batch_list_x4),
+                    np.array(batch_list_x5)],np.array(batch_list_y))
+                batch_list_x1 = []
+                batch_list_x2 = []
+                batch_list_x3 = []
+                batch_list_x4 = []
+                batch_list_x5 = []
+                batch_list_y = []
 
 def score(label, pred):
 
@@ -89,8 +125,11 @@ def get_X_Y_from_df(data, data_augment=True,shuffer =  True):
         data1['q1_cut_id'] = data1['q1_cut_id'].map(lambda x:ss(x))
         data1['q2_cut_id'] = data1['q2_cut_id'].map(lambda x:ss(x))
         data = data.append(data1)
+
     data_q1 = np.array(list(data.q1_cut_id.values))
     data_q2 = np.array(list(data.q2_cut_id.values))
+    data_q1_word = np.array(list(data['q1_word_id'].values))
+    data_q2_word = np.array(list(data['q2_word_id'].values))
     magic_feat = np.array(list(data.magic_feat.values))
 
     data_label = data.label.values
@@ -104,7 +143,7 @@ def get_X_Y_from_df(data, data_augment=True,shuffer =  True):
 
     else:
         data_label = data_label
-        X = [data_q1, data_q2, magic_feat]
+        X = [data_q1, data_q2, data_q2_word, data_q2_word, magic_feat]
     Y = keras.utils.to_categorical(data_label, num_classes=2)
 
     print('magic_feat',magic_feat.shape)

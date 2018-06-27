@@ -10,16 +10,12 @@ from collections import defaultdict
 sys.path.append('utils/')
 
 import config
-from w2v import load_my_train_w2v, load_pre_train_w2v
+from w2v import load_my_train_w2v, load_pre_train_w2v,make_w2v
 from CutWord import cut_word, more
-
+import pickle
 from feats1 import feats1_gen, extract_features
 from feats0 import magic1
 from feats3 import mytfidf
-if config.use_pre_train:
-    vocab, embed_weights = load_pre_train_w2v(config.origin_csv)
-else:
-    vocab, embed_weights = load_my_train_w2v(config.origin_csv)
 
 
 def padding_id(ids, padding_token=0, padding_length=None):
@@ -34,15 +30,21 @@ def word2id(contents, word_voc):
     '''
 #     contents = str(contents)
 #     contents = contents.split()
-
+    #print(word_voc)
     ids = [word_voc[c] if c in word_voc else len(word_voc) for c in contents]
 
     return padding_id(ids, padding_token=0, padding_length=config.word_maxlen)
 
 
 def data_2id(data):
+    with open(config.char_embed_weights+'.vocab','rb') as f:
+        vocab = pickle.load(f)
+    with open(config.word_embed_weights+'.vocab','rb') as f:
+        vocab_word  = pickle.load(f)
     data['q1_cut_id'] = data['q1_cut'].map(lambda x: word2id(x, vocab))
     data['q2_cut_id'] = data['q2_cut'].map(lambda x: word2id(x, vocab))
+    data['q1_word_id'] = data['q1_cut_word'].map(lambda x: word2id(x, vocab_word))
+    data['q2_word_id'] =data['q1_cut_word'].map(lambda x: word2id(x, vocab_word))
     return data
 
 
@@ -100,6 +102,7 @@ def merge_feats(data, featdirs):
         df2 = pd.read_csv(featdirs[2])
         #df3 = pd.read_csv(featdirs[3])
     df = pd.concat([df0, df1, df2], axis=1)
+    #df= df.apply(lambda x: (x - np.min(x)) / (np.max(x) - np.min(x)))  # guiyihua 
     print(list(df))
     return df
 

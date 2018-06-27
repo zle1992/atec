@@ -5,12 +5,12 @@ import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
-def mytfidf(df_data):
+def mytfidf(df_data,cols=['q1_cut','q2_cut']):
     tfidf = TfidfVectorizer( ngram_range=(1, 1))
 
     questions_txt = pd.Series(
-        df_data['q1_cut'].tolist() +
-        df_data['q2_cut'].tolist()
+        df_data[cols[0]].tolist() +
+        df_data[cols[1]].tolist()
     ).astype(str)
 
     tfidf.fit_transform(questions_txt)

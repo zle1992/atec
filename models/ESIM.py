@@ -1,25 +1,24 @@
 import numpy as np
 import pandas as pd
 from keras.layers import *
+
 from keras.activations import softmax
 from keras.models import Model
+from keras.models import Sequential
 from keras.optimizers import Nadam, Adam
 from keras.regularizers import l2
 import keras.backend as K
 import sys
 sys.path.append('utils/')
 import config
+sys.path.append('models/layers/')
 
+from MyPooling import MyMeanPool,MyMaxPool
+from MyEmbeding import  create_pretrained_embedding
+from Cross import cross,distence
 MAX_LEN = config.word_maxlen 
 
 
-def create_pretrained_embedding(pretrained_weights_path, trainable=False, **kwargs):
-    "Create embedding layer from a pretrained weights array"
-    pretrained_weights = np.load(pretrained_weights_path)
-    in_dim, out_dim = pretrained_weights.shape
-    embedding = Embedding(in_dim, out_dim, weights=[
-                          pretrained_weights], trainable=True, **kwargs)
-    return embedding
 
 
 def unchanged_shape(input_shape):
@@ -40,6 +39,9 @@ def submult(input_1, input_2):
     sub = substract(input_1, input_2)
     out_ = Concatenate()([sub, mult])
     return out_
+
+
+
 
 
 def apply_multiple(input_, layers):
@@ -76,7 +78,7 @@ def soft_attention_alignment(input_1, input_2):
     return in1_aligned, in2_aligned
 
 
-def decomposable_attention(pretrained_embedding=config.word_embed_weight,
+def decomposable_attention(pretrained_embedding=config.word_embed_weights,
                            projection_dim=300, projection_hidden=0, projection_dropout=0.2,
                            compare_dim=500, compare_dropout=0.2,
                            dense_dim=300, dense_dropout=0.2,
@@ -128,13 +130,28 @@ def decomposable_attention(pretrained_embedding=config.word_embed_weight,
     q1_compare = time_distributed(q1_combined, compare_layers)
     q2_compare = time_distributed(q2_combined, compare_layers)
 
-    # Aggregate
-    q1_rep = apply_multiple(q1_compare, [GlobalAvgPool1D(), GlobalMaxPool1D()])
-    q2_rep = apply_multiple(q2_compare, [GlobalAvgPool1D(), GlobalMaxPool1D()])
+    # # Aggregate
+    # q1_rep = apply_multiple(q1_compare, [GlobalAvgPool1D(), GlobalMaxPool1D()])
+    # q2_rep = apply_multiple(q2_compare, [GlobalAvgPool1D(), GlobalMaxPool1D()])
 
-    # Classifier
-    merged = Concatenate()([q1_rep, q2_rep,magic_dense])
-    dense = BatchNormalization()(merged)
+
+   
+    q1_rep_max = MyMaxPool(axis=1)(q1_compare)
+    q2_rep_max = MyMaxPool(axis=1)(q2_compare)
+
+
+    cro_max = cross(q1_rep_max,q2_rep_max,compare_dim)
+ 
+    dist = distence(q1_rep_max,q2_rep_max)
+    
+
+    #dense = cro
+    dense = Concatenate()([
+        q1_rep_max, q2_rep_max,cro_max,dist,
+        ])
+
+    #merged = Concatenate()([q1_rep, q2_rep,magic_dense])
+    dense = BatchNormalization()(dense)
     dense = Dense(dense_dim, activation=activation)(dense)
     dense = Dropout(dense_dropout)(dense)
     dense = BatchNormalization()(dense)
@@ -150,56 +167,137 @@ def decomposable_attention(pretrained_embedding=config.word_embed_weight,
     return model
 
 
-def esim(pretrained_embedding=config.word_embed_weight,
+# def esim_BAK(pretrained_embedding=config.word_embed_weight,
+#          maxlen=MAX_LEN,
+#          lstm_dim=300,
+#          dense_dim=300,
+#          dense_dropout=0.5):
+
+#     # Based on arXiv:1609.06038
+
+#     magic_input = Input(shape=(len(config.feats),))
+#     magic_dense = BatchNormalization()(magic_input)
+#     magic_dense = Dense(64, activation='relu')(magic_dense)
+
+#     q1 = Input(name='q1', shape=(maxlen,))
+#     q2 = Input(name='q2', shape=(maxlen,))
+
+#     # Embedding
+#     embedding = create_pretrained_embedding(
+#         pretrained_embedding, mask_zero=False)
+#     bn = BatchNormalization(axis=2)
+#     q1_embed = bn(embedding(q1))
+#     q2_embed = bn(embedding(q2))
+
+#     # Encode
+#     encode = Bidirectional(LSTM(lstm_dim, return_sequences=True))
+#     q1_encoded = encode(q1_embed)
+#     q2_encoded = encode(q2_embed)
+
+#     # Attention
+#     q1_aligned, q2_aligned = soft_attention_alignment(q1_encoded, q2_encoded)
+
+#     # Compose
+#     q1_combined = Concatenate()(
+#         [q1_encoded, q2_aligned, submult(q1_encoded, q2_aligned)])
+#     q2_combined = Concatenate()(
+#         [q2_encoded, q1_aligned, submult(q2_encoded, q1_aligned)])
+
+#     compose = Bidirectional(LSTM(lstm_dim, return_sequences=True))
+#     q1_compare = compose(q1_combined)
+#     q2_compare = compose(q2_combined)
+
+#     # Aggregate
+#     q1_rep = apply_multiple(q1_compare, [GlobalAvgPool1D(), GlobalMaxPool1D()])
+#     q2_rep = apply_multiple(q2_compare, [GlobalAvgPool1D(), GlobalMaxPool1D()])
+
+#     # Classifier
+#     cro = cross(q1_rep,q2_rep,lstm_dim*2)
+#     dist = distence(q1_rep,q2_rep)
+#     #dense = cro
+#     dense = Concatenate()([q1_rep, q2_rep,cro,dist])
+
+
+#     dense = BatchNormalization()(merged)
+#     dense = Dense(dense_dim, activation='relu')(dense)
+#     dense = BatchNormalization()(dense)
+#     dense = Dropout(dense_dropout)(dense)
+#     dense = Dense(dense_dim, activation='relu')(dense)
+#     dense = BatchNormalization()(dense)
+#     dense = Dropout(dense_dropout)(dense)
+#     out_ = Dense(2, activation='sigmoid')(dense)
+
+
+#     model = Model(inputs=[q1, q2,magic_input], outputs=out_)
+#     model.compile(optimizer=Adam(),
+#                   loss='binary_crossentropy', metrics=['accuracy'])
+#     model.summary()
+#     return model
+
+
+
+
+def esim(pretrained_embedding=config.word_embed_weights,
          maxlen=MAX_LEN,
          lstm_dim=300,
          dense_dim=300,
-         dense_dropout=0.5):
+         dense_dropout=0.2):
 
     # Based on arXiv:1609.06038
 
     magic_input = Input(shape=(len(config.feats),))
     magic_dense = BatchNormalization()(magic_input)
-    magic_dense = Dense(64, activation='relu')(magic_dense)
+    magic_dense = Dense(64, activation='elu')(magic_dense)
 
     q1 = Input(name='q1', shape=(maxlen,))
     q2 = Input(name='q2', shape=(maxlen,))
 
     # Embedding
-    embedding = create_pretrained_embedding(
-        pretrained_embedding, mask_zero=False)
-    bn = BatchNormalization(axis=2)
-    q1_embed = bn(embedding(q1))
-    q2_embed = bn(embedding(q2))
-
+    emb_layer = create_pretrained_embedding(
+        config.word_embed_weight, mask_zero=False)
+    
     # Encode
-    encode = Bidirectional(LSTM(lstm_dim, return_sequences=True))
-    q1_encoded = encode(q1_embed)
-    q2_encoded = encode(q2_embed)
+    encode = Sequential()
+    encode.add(emb_layer)
+    encode.add(BatchNormalization(axis=2))
+    encode.add(Bidirectional(LSTM(lstm_dim, return_sequences=True)))
+    
+    q1_encoded = encode(q1)
+    q2_encoded = encode(q2)
 
     # Attention
     q1_aligned, q2_aligned = soft_attention_alignment(q1_encoded, q2_encoded)
 
-    # Compose
+
+     # Compose
     q1_combined = Concatenate()(
         [q1_encoded, q2_aligned, submult(q1_encoded, q2_aligned)])
     q2_combined = Concatenate()(
         [q2_encoded, q1_aligned, submult(q2_encoded, q1_aligned)])
 
+
     compose = Bidirectional(LSTM(lstm_dim, return_sequences=True))
     q1_compare = compose(q1_combined)
     q2_compare = compose(q2_combined)
 
-    # Aggregate
-    q1_rep = apply_multiple(q1_compare, [GlobalAvgPool1D(), GlobalMaxPool1D()])
-    q2_rep = apply_multiple(q2_compare, [GlobalAvgPool1D(), GlobalMaxPool1D()])
+    # # Aggregate
+    # q1_rep = apply_multiple(q1_compare, [MyMaxPool(axis=1), MyMeanPool(axis=1)])
+    # q2_rep = apply_multiple(q2_compare, [MyMaxPool(axis=1), MyMeanPool(axis=1)])
 
+
+    q1_rep = MyMaxPool(axis=1)(q1_compare)
+    q2_rep = MyMaxPool(axis=1)(q2_compare)
+    
     # Classifier
-    merged = Concatenate()([q1_rep, q2_rep,magic_dense])
+    cro = cross(q1_rep,q2_rep,lstm_dim*2)
+    dist = distence(q1_rep,q2_rep)
+    #dense = cro
+    if config.nofeats:
+        dense = Concatenate()([q1_rep, q2_rep,cro,dist])
+    else:
+        dense = Concatenate()([q1_rep, q2_rep,cro,dist,magic_dense])
 
-    dense = BatchNormalization()(merged)
-    dense = Dense(dense_dim, activation='elu')(dense)
-    dense = BatchNormalization()(dense)
+   
     dense = Dropout(dense_dropout)(dense)
     dense = Dense(dense_dim, activation='elu')(dense)
     dense = BatchNormalization()(dense)
@@ -208,7 +306,7 @@ def esim(pretrained_embedding=config.word_embed_weight,
 
 
     model = Model(inputs=[q1, q2,magic_input], outputs=out_)
-    model.compile(optimizer=Adam(lr=1e-3),
+    model.compile(optimizer=Adam(),
                   loss='binary_crossentropy', metrics=['accuracy'])
     model.summary()
     return model

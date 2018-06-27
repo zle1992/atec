@@ -45,57 +45,20 @@ def cut_single(x,cut_char_level):
             if use_pinyin:
                 my_word = str2pinyin.char2pinyin(my_word)
             res.append(my_word)
-            
     return res
-
-def moredata(data,random_state):
-    q1 = data[data.label==0][['q1','q1_cut']].sample(frac=0.2,random_state=random_state)
-    q2 = data[data.label==0][['q2','q2_cut']].sample(frac=0.2,random_state=random_state)
-
-
-    data_new = pd.DataFrame()
-    data_new['q1'] = q1.q1.values
-    data_new['q1_cut'] =q1.q1_cut.values
-    data_new['q2'] = q2.q2.values
-    data_new['q2_cut'] =q2.q2_cut.values
-    data_new['id'] = -1
-    data_new['label'] = 0
-    return data_new
-def moredata2(data,random_state):
-    
-    q2 = data[data.label==0][['q2','q2_cut']].sample(frac=0.2,random_state=random_state)
-
-    q1 = data[data.label==0][['q1','q1_cut']].sample(frac=0.2,random_state=random_state)
-
-
-    data_new = pd.DataFrame()
-    data_new['q1'] = q1.q1.values
-    data_new['q1_cut'] =q1.q1_cut.values
-    data_new['q2'] = q2.q2.values
-    data_new['q2_cut'] =q2.q2_cut.values
-    data_new['id'] = -1
-    data_new['label'] = 0
-    return data_new
-
-
 def more(data,n):
-    print('more_data-----')
-    for i in range(n+1):
-        if i==0:
-            data1 = pd.DataFrame()
-        else :
-            data1= data1.append( moredata(data,random_state=i))
-            data1= data1.append( moredata2(data,random_state=i))
-
-    return data.append(data1) 
-def cut_word(path,cut_char_level):
+    pass
+def cut_word(path):
 
     data = pd.read_csv(path, sep='\t', encoding='utf8',#nrows=1000,
                        names=['id', 'q1', 'q2', 'label'])
     #data['id'] = range(len(data))#重塑id
     data['label'] = data['label'].fillna(0)
-    data['q1_cut'] = data['q1'].map(lambda x: cut_single(x,cut_char_level))
-    data['q2_cut'] = data['q2'].map(lambda x: cut_single(x,cut_char_level))
+    data['q1_cut'] = data['q1'].map(lambda x: cut_single(x,cut_char_level=True))
+    data['q2_cut'] = data['q2'].map(lambda x: cut_single(x,cut_char_level=True))
+
+    data['q1_cut_word'] = data['q1'].map(lambda x: cut_single(x,cut_char_level=False))
+    data['q2_cut_word'] = data['q2'].map(lambda x: cut_single(x,cut_char_level=False))
     print('cut done')
     
     print(data.shape)
@@ -104,7 +67,7 @@ def cut_word(path,cut_char_level):
     
 def read_cut(path):
     if not os.path.exists(config.data_cut_hdf):
-        data = cut_word(path,config.cut_char_level)
+        data = cut_word(path)
         data.to_hdf(config.data_cut_hdf, "data")
     data = pd.read_hdf(config.data_cut_hdf)
     return data

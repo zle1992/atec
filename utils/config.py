@@ -1,5 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import sys
+from keras.activations import softmax
+sys.path.append('models/layers/')
+from MyPooling import MyMeanPool,MyMaxPool
+
+CustomObjects = {"softmax": softmax,'MyMaxPool':MyMaxPool}
+
 
 
 batch_size = 128
@@ -13,8 +20,8 @@ jieba_dict = 'data/share/jieba/jieba_dict.txt'
 stopwords_path = 'data/share/jieba/stops.txt'
 origin_csv = 'data/data/atec_nlp_sim_train2.csv'
 
-data_augment = True
-shuffer = True
+data_augment = False
+shuffer = False
 
 
 nofeats = False
@@ -88,27 +95,30 @@ else:
 use_pre_train = False
 
 
-cut_char_level = True
+cut_char_level = False
 
-if cut_char_level:
+# if cut_char_level:
 
-    data_cut_hdf = 'data/cache/train_cut_char.hdf'
-    train_feats = 'data/cache/train_feats_char.hdf'
-    data_feat_hdf = 'data/cache/train_magic_char.hdf'
-    train_df = 'data/cache/train_magic_char_train_f{0}.hdf'.format(len(feats))
-    dev_df = 'data/cache/train_magic_char_more_dev_f{0}.hdf'.format(len(feats))
+#     data_cut_hdf = 'data/cache/train_cut_char.hdf'
+#     train_feats = 'data/cache/train_feats_char.hdf'
+#     data_feat_hdf = 'data/cache/train_magic_char.hdf'
+#     train_df = 'data/cache/train_magic_char_train_f{0}.hdf'.format(len(feats))
+#     dev_df = 'data/cache/train_magic_char_more_dev_f{0}.hdf'.format(len(feats))
 
-    word_embed_weight = 'data/share/my_w2v/word_embed_weight_char.npy'
-    w2v_content_word_model = 'data/share/my_w2v/train_char.model'
-else:
-    data_cut_hdf = 'data/cache/train_cut_word.hdf'
-    train_feats = 'data/cache/train_feats_word.hdf'
-    data_feat_hdf = 'data/cache/train_magic_word.hdf'
-    train_df = 'data/cache/train_magic_word_train_f{0}.hdf'.format(len(feats))
-    dev_df = 'data/cache/train_magic_word_more_dev_f{0}.hdf'.format(len(feats))
+ 
+# else:
+#     data_cut_hdf = 'data/cache/train_cut_word.hdf'
+#     train_feats = 'data/cache/train_feats_word.hdf'
+#     data_feat_hdf = 'data/cache/train_magic_word.hdf'
+#     train_df = 'data/cache/train_magic_word_train_f{0}.hdf'.format(len(feats))
+#     dev_df = 'data/cache/train_magic_word_more_dev_f{0}.hdf'.format(len(feats))
 
-    word_embed_weight = 'data/share/my_w2v/word_embed_weight_word.npy'
-    w2v_content_word_model = 'data/share/my_w2v/train_word.model'
+
+data_cut_hdf = 'data/cache/train_cut.hdf'
+word_embed_weights = 'data/share/my_w2v/word_embed_weight.npy'
+w2v_content_word_model = 'data/share/my_w2v/train_char.model'
+char_embed_weights = 'data/share/my_w2v/char_embed_weight.npy'
+w2v_content_char_model = 'data/share/my_w2v/train_word.model'
 
 
 if cut_char_level:

@@ -25,13 +25,15 @@ from Feats import data_2id, add_hum_feats
 from CutWord import cut_word
 from help import get_X_Y_from_df
 import pandas as pd
+sys.path.append('models/layers/')
+from MyPooling import MyMeanPool,MyMaxPool
 
 def load_data(in_path):
     print('load data')
-    data = cut_word(in_path, config.cut_char_level)
+    data = cut_word(in_path)
     data = data_2id(data)  # 2id
-    data = add_hum_feats(data, '')  # 生成特征并加入
-
+    
+    data = add_hum_feats(data,config.test_featdires) #生成特征并加入
     return data
 
 
@@ -42,8 +44,10 @@ def main(in_path, out_path):
             model_path = file
     data = load_data(in_path)
     X, _ = get_X_Y_from_df(data, False, False)
+    if config.nofeats:
+        X=[X[0],X[1]]
     print('load model and predict')
-    model = load_model(model_path, custom_objects={"softmax": softmax})
+    model = load_model(model_path, custom_objects=config.CustomObjects)
     test_pred = model.predict(X, batch_size=config.batch_size)
     print('save submit file')
     data['label'] = [int(x > 0.5) for x in test_pred[:, 1]]

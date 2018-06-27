@@ -52,21 +52,14 @@ def MatchScore(l, r, mode="euclidean"):
     else:
         raise ValueError("Unknown match score mode %s" % mode)
 
-def convs_block(data, convs=[3, 4, 5], f=256):
-    pools = []
-    for c in convs:
-        conv = Activation(activation="relu")(BatchNormalization()(
-            Conv1D(filters=f, kernel_size=c, padding="valid")(data)))
-        pool = GlobalMaxPool1D()(conv)
-        pools.append(pool)
-    return concatenate(pools)
+
 
 
 
 
 def ABCNN(
     left_seq_len, right_seq_len, nb_filter, filter_widths,
-    depth=2, dropout=0.5, abcnn_1=True, abcnn_2=True, collect_sentence_representations=False, mode="euclidean", batch_normalize=True
+    depth=2, dropout=0.2, abcnn_1=True, abcnn_2=True, collect_sentence_representations=False, mode="euclidean", batch_normalize=True
 ):
     assert depth >= 1, "Need at least one layer to build ABCNN"
     assert not (
@@ -79,10 +72,8 @@ def ABCNN(
 
     left_sentence_representations = []
     right_sentence_representations = []
-    if len(config.feats)==0:
-        magic_input = Input(shape=(1,))
-    else:
-        magic_input = Input(shape=(len(config.feats),))
+ 
+    magic_input = Input(shape=(len(config.feats),))
     magic_dense = BatchNormalization()(magic_input)
     magic_dense = Dense(64, activation='relu')(magic_dense)
 
@@ -96,7 +87,7 @@ def ABCNN(
 
 
     embedding = Embedding(in_dim, out_dim, weights=[
-                          pretrained_weights], trainable=True,)
+                          pretrained_weights], trainable=False,)
 
 
     left_embed = embedding(left_input)
@@ -146,8 +137,8 @@ def ABCNN(
         # 2D convolutions so we have the ability to treat channels.
         # Effectively, we are still doing 1-D convolutions.
   
-        my_conv2d = Conv2D(activation="tanh", data_format="channels_first", padding="valid", filters=nb_filter, kernel_size=(filter_width, out_dim))
-        my_conv2d2 = Conv2D(activation="tanh", data_format="channels_first", padding="valid", filters=nb_filter, kernel_size=(filter_width, out_dim))
+        my_conv2d = Conv2D( data_format="channels_first", padding="valid", filters=nb_filter, kernel_size=(filter_width, out_dim))
+        my_conv2d2 = Conv2D( data_format="channels_first", padding="valid", filters=nb_filter, kernel_size=(filter_width, out_dim))
         conv_left = my_conv2d(left_embed_padded)
         
         # Reshape and Permute to get back to 1-D
@@ -285,6 +276,6 @@ def ABCNN(
 
     model = Model([left_input, right_input,magic_input], output=classify)
     model.compile(loss='binary_crossentropy',
-                  optimizer=Adam(lr=0.01), metrics=['acc'])
+                  optimizer=Adam(), metrics=['acc'])
     model.summary()
     return model

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from gensim.models import Word2Vec
 from gensim.models.word2vec import LineSentence
-
+import pickle
 sys.path.append('utils/')
 #sys.path.append('feature/')
 import config
@@ -87,16 +87,19 @@ def load_pre_train_w2v(path):
 
 
 #######################################
-def make_w2v(path):
-    if not os.path.exists(config.w2v_content_word_model):
+def make_w2v(path,cut_char_level):
+    if not os.path.exists(path):
 
-        data = cut_word(config.origin_csv,config.cut_char_level)
-        content = list(data.q1_cut) + list(data.q2_cut)
+        data = read_cut(config.origin_csv)
+        if cut_char_level:
+            content = list(data['q1_cut']) + list(data['q2_cut'])
+        else:
+            content = list(data['q1_cut_word'])+list(data['q2_cut_word'])
         model = Word2Vec(content, size=config.w2v_vec_dim, window=5, min_count=5,
                          )
-        model.save(config.w2v_content_word_model)
-
-    model = Word2Vec.load(config.w2v_content_word_model)
+        model.save(path)
+    else:
+        model = Word2Vec.load(path)
 
     weights = model.wv.syn0
     vocab = dict([(k, v.index + 1) for k, v in model.wv.vocab.items()])
@@ -108,18 +111,41 @@ def make_w2v(path):
     embed_weights[weights.shape[0] + 1] = unk_vec - unk_vec.mean()
     embed_weights[0] = pading_vec
 
-    np.save(config.word_embed_weight, embed_weights)
-    print(embed_weights.shape)
-    print('save embed_weights!')
     return vocab, embed_weights
 
-def load_my_train_w2v(path):
-    return make_w2v(path)
+
+def save_my_train_w2v():
+
+ 
+     #make char
+    vocab, embed_weights = make_w2v(config.w2v_content_char_model,cut_char_level=True)
+    np.save(config.char_embed_weights, embed_weights)
+    with open(config.char_embed_weights+'.vocab','wb') as f:
+        pickle.dump(vocab,f)
+    print(embed_weights.shape)
+    print('save embed_weights!')
+    #make word
+    vocab, embed_weights = make_w2v(config.w2v_content_word_model,cut_char_level=False)
+    np.save(config.word_embed_weights,embed_weights)
+    with open(config.word_embed_weights+'.vocab','wb') as f:
+        pickle.dump(vocab,f)
+        
+    print(embed_weights.shape)
+    print('save embed_weights!')
+
+
+def load_my_train_w2v(path,cut_char_level):
+    pass
+    
+
 ################################################
 
 
 
 if __name__ == '__main__':
 
-    #save_my_w2v(path=config.origin_csv)
-    make_w2v(path=config.origin_csv)
+    save_my_train_w2v()
+    # #make char
+    # make_w2v(config.w2v_content_char_model,cut_char_level=True)
+    # #make word
+    # make_w2v(config.w2v_content_word_model,cut_char_level=False)

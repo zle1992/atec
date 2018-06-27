@@ -26,9 +26,10 @@ from sklearn.model_selection import train_test_split
 import keras.backend as K
 from keras.callbacks import TensorBoard
 from keras.callbacks import Callback
-from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard,ReduceLROnPlateau
 sys.path.append('models')
-from CNN import rnn_v1, cnn_v2, model_conv1D_,Siamese_LSTM,ABCNN2
+from CNN import  model_conv1D_,ABCNN2,dssm
+from RNN import rnn_v1,Siamese_LSTM,my_rnn
 from ESIM import esim, decomposable_attention
 from ABCNN import ABCNN
 from bimpm import bimpm
@@ -37,8 +38,8 @@ sys.path.append('utils/')
 sys.path.append('feature/')
 import config
 from Feats import data_2id,add_hum_feats
-from help import score, train_batch_generator, train_batch_generator3,train_test, get_X_Y_from_df
-from CutWord import read_cut,more
+from help import score, train_batch_generator, train_batch_generator3,train_batch_generator5,train_test, get_X_Y_from_df
+from CutWord import read_cut
 
 def load_data():
     path = config.origin_csv
@@ -51,21 +52,28 @@ def load_data():
     x_dev, y_dev = get_X_Y_from_df(dev, False,False)
     print('train shape', x_train[0].shape)
     print('dev shape', x_dev[0].shape)
+    print('aaa',len(x_train))
+    #return [x_train[0],x_train[1],x_train[4]], y_train,[x_dev[0],x_dev[1],x_dev[4]], y_dev
     return x_train, y_train,x_dev, y_dev
 
-def train(x_train, y_train,x_dev, y_dev,model_name, model):
-    for i in range(20):
-        K.set_value(model.optimizer.lr, 0.005)
-        if i == 15:
+ 
+def train(x_train, y_train,x_dev, y_dev,model_name, model,lr):
+    for i in range(6):
+        K.set_value(model.optimizer.lr, lr)
+        if i == 5:
             K.set_value(model.optimizer.lr, 0.0001)
 
         model.fit_generator(
-            train_batch_generator3(x_train, y_train, config.batch_size),
+            train_batch_generator5(x_train, y_train, config.batch_size),
             epochs=1,
             steps_per_epoch=int(y_train.shape[0] / config.batch_size),
             validation_data=(x_dev, y_dev),
-            class_weight={0: 1, 1: 4},
-#            callbacks=[TensorBoard(log_dir='data/log_dir'),EarlyStopping(monitor='val_loss',patience=0,verbose=0,mode='auto')],
+            class_weight={0: 1, 1: 3},
+            # callbacks=[TensorBoard(log_dir='data/log_dir'),
+            # ReduceLROnPlateau(min_lr=0.00001,patience=0),
+            # EarlyStopping(monitor='val_loss',patience=0,verbose=0,mode='auto'),
+            # ],
+
             verbose=1,
 
         )
@@ -89,7 +97,7 @@ def main(model_name):
     print('model name', model_name)
     path = config.origin_csv
     x_train, y_train,x_dev, y_dev = load_data()
-    
+    lr = 0.001
     if model_name == 'bimpm':
         model = bimpm()
     if model_name == 'drmmt':
@@ -97,19 +105,27 @@ def main(model_name):
 
     if model_name == 'msrnn':
         model = MATCHSRNN()
+    if model_name == 'dssm':
+        model = dssm()
+    
     if model_name == 'arc2':
         model = arc2()
     if model_name == 'test':
         model = test()
     if model_name == 'cnn':
-
+        lr = 0.01
         model = model_conv1D_()
     if model_name == 'rnn':
 
         model = rnn_v1()
+    if model_name =='rnn0':
+        model = my_rnn()
     if model_name == 'slstm':
 
         model = Siamese_LSTM()
+    if model_name == 'scnn':
+
+        model = Siamese_CNN()
 
     if model_name == 'esim':
         model = esim()
@@ -119,15 +135,15 @@ def main(model_name):
     if model_name == 'abcnn':
 
         model = ABCNN(
-            left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=3,
-            nb_filter=100, filter_widths=[5,4,3],
-            collect_sentence_representations=True, abcnn_1=True, abcnn_2=False,
+            left_seq_len=config.word_maxlen, right_seq_len=config.word_maxlen, depth=2,
+            nb_filter=100, filter_widths=[5,3],
+            collect_sentence_representations=False, abcnn_1=True, abcnn_2=True,
             #mode="euclidean",
-            mode="cos",
-            #mode='dot'
+            #mode="cos",
+            mode='dot'
         )
 
-    train(x_train, y_train,x_dev, y_dev,model_name, model)
+    train(x_train, y_train,x_dev, y_dev,model_name, model,lr)
 
 if __name__ == '__main__':
 
