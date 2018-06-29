@@ -28,7 +28,7 @@ import numpy as np
 from keras import backend as K
 sys.path.append('utils/')
 import config
-
+from help import *
 sys.path.append('models/layers/')
 
 from MyPooling import MyMeanPool,MyMaxPool
@@ -85,67 +85,7 @@ def my_rnn():
 
 def rnn_v1(lstm_hidden=50):
 
-    # The embedding layer containing the word vectors
-    # Embedding
-    emb_layer = create_pretrained_embedding(
-        config.word_embed_weight, mask_zero=    True)
-    # Define inputs
-    seq1 = Input(shape=(config.word_maxlen,))
-    seq2 = Input(shape=(config.word_maxlen,))
-    magic_input = Input(shape=(len(config.feats),))
-
-    # Run inputs through embedding
-    # emb1 = core.Masking(mask_value=0)(emb_layer(seq1))
-    # emb2 = core.Masking(mask_value=0)(emb_layer(seq2))
-    emb1 = emb_layer(seq1)
-    emb2 = emb_layer(seq2)
- 
-    magic_dense = BatchNormalization()(magic_input)
-    magic_dense = Dense(2, activation='relu')(magic_dense)
-
-    
-    compose = Bidirectional(CuDNNLSTM(lstm_hidden,return_sequences=True))
-    compose2 = Bidirectional(CuDNNLSTM(lstm_hidden,return_sequences=True))
-  
-  
-    q1_compare = compose(emb1)
-    #q1_compare = BatchNormalization()(q1_compare)
-    q1_compare = compose2(q1_compare)
-    q1_compare = BatchNormalization()(q1_compare)
-    #q1_compare = MyMaxPool(axis=1)(q1_compare)
-    q1_compare = GlobalAveragePooling1D()(q1_compare)
-    #q1_compare = Dense(256, activation='elu')(q1_compare)
-
-    q2_compare = compose(emb1)
-    #q2_compare = BatchNormalization()(q2_compare)
-    q2_compare = compose2(q2_compare)
-    q2_compare = BatchNormalization()(q2_compare)
-    #q2_compare = MyMaxPool(axis=1)(q2_compare)
-    q2_compare = GlobalAveragePooling1D()(q2_compare)
-    #q2_compare = Dense(256, activation='elu')(q2_compare)
-   
-    diff = Lambda(lambda x: K.abs(
-        x[0] - x[1]), output_shape=(lstm_hidden*2,))([q1_compare, q2_compare])
-    mul = Lambda(lambda x: x[0] * x[1],
-                 output_shape=(lstm_hidden*2,))([q1_compare, q2_compare])
-
-    x= concatenate([q1_compare,q2_compare,])#diff,mul])
-
-    # x = Dropout(0.5)(x)
-    # x = BatchNormalization()(x)
-    # x = Dense(256, activation='relu')(x)
-
-    x = Dropout(0.5)(x)
-    x = BatchNormalization()(x)
-    pred = Dense(2, activation='softmax')(x)
-
-    model = Model(inputs=[seq1, seq2, magic_input], outputs=pred)
-
-    model.compile(loss='binary_crossentropy',
-                  optimizer=Adam(), metrics=['acc'])
-    model.summary()
-    return model
-
+    pass
 
 
 
@@ -178,6 +118,7 @@ def Siamese_LSTM():
     x2.add(emb_layer_word)
     # # LSTM
     x2.add(Bidirectional(CuDNNLSTM(n_hidden,return_sequences=True)))
+    #x2.add(Bidirectional(LSTM(n_hidden,return_sequences=True)))
     x2.add(BatchNormalization())
     x2.add(MyMaxPool(axis=1))
     shared_model2 = x2
@@ -185,7 +126,7 @@ def Siamese_LSTM():
   
     magic_input = Input(shape=(len(config.feats),))
     magic_dense = BatchNormalization()(magic_input)
-    magic_dense = Dense(64, activation='elu')(magic_dense)
+    magic_dense = Dense(64, activation='relu')(magic_dense)
 
 
     left_input = Input(shape=(config.word_maxlen,), dtype='int32')
@@ -204,28 +145,28 @@ def Siamese_LSTM():
     # Pack it all up into a Manhattan Distance model
     malstm_distance = Lambda(lambda x: K.exp(-K.sum(K.abs(x[0] - x[1]), axis=1, keepdims=True)), output_shape=(
         1,))([left, right])
-    #ManDist()([shared_model(left_input), shared_model(right_input)])
 
-             
+    malstm_distance2 = Lambda(lambda x: K.exp(-K.sum(K.abs(x[0] - x[1]), axis=1, keepdims=True)), output_shape=(
+        1,))([left_w, right_w])
+        
     cro = cross(left, right,n_hidden*2)
     cro2 = cross(left_w, right_w,n_hidden*2)
-    if config.nofeats:
-        merge = concatenate([left, right, cro,cro2,malstm_distance])  # , magic_dense, malstm_distance])
-    else:   
-        merge = concatenate([left, right, cro,cro2, magic_dense, malstm_distance])
+    
+    #if config.nofeats:
+    merge = concatenate([ left,right,cro,malstm_distance2,magic_dense])  # , magic_dense, malstm_distance])
+    # else:   
+    #     merge = concatenate([ cro,cro2])
     # # The MLP that determines the outcome
     x = Dropout(0.2)(merge)
     x = BatchNormalization()(x)
     x = Dense(300, activation='relu')(x)
-    X = concatenate([x,magic_dense])  # , magic_dense, distance_dense])
+    
     x = Dropout(0.2)(x)
     x = BatchNormalization()(x)
-    pred = Dense(2, activation='sigmoid')(x)
-    model = Model(inputs=[left_input, right_input,w1,w2,
-                          magic_input], outputs=[pred])
-
+    pred = Dense(1, activation='sigmoid')(x)
+    model = Model(inputs=[left_input, right_input,w1,w2,magic_input], outputs=pred)
     model.compile(loss='binary_crossentropy',
-                  optimizer="adam", metrics=['acc'])
+                  optimizer="adam", metrics = [Precision,Recall,F1,])
     model.summary()
     shared_model.summary()
     return model

@@ -35,7 +35,7 @@ from SpatialGRU import *
 from MyEmbeding import create_pretrained_embedding
 from Cross import cross
 from Attention import Attention
-
+from help import *
 
 def cosine_similarity( x1, x2):
         """Compute cosine similarity.
@@ -52,7 +52,7 @@ def cosine_similarity( x1, x2):
 
 def cnn_help(emb1,emb2):
     
-    nbfilters=[256,246,256,128,64,32]
+    nbfilters=[256,246,256,128]#,64,32]
     # 1D convolutions that can iterate over the word vectors
     conv1 = Conv1D(filters=nbfilters[0], kernel_size=1,
                    padding='same', activation='relu')
@@ -62,10 +62,10 @@ def cnn_help(emb1,emb2):
                    padding='same', activation='relu')
     conv4 = Conv1D(filters=nbfilters[3], kernel_size=4,
                    padding='same', activation='relu')
-    conv5 = Conv1D(filters=nbfilters[4], kernel_size=5,
-                   padding='same', activation='relu')
-    conv6 = Conv1D(filters=nbfilters[5], kernel_size=6,
-                   padding='same', activation='relu')
+    # conv5 = Conv1D(filters=nbfilters[4], kernel_size=5,
+    #                padding='same', activation='relu')
+    # conv6 = Conv1D(filters=nbfilters[5], kernel_size=6,
+    #                padding='same', activation='relu')
 
    
 
@@ -90,18 +90,18 @@ def cnn_help(emb1,emb2):
     conv4b = conv4(emb2)
     glob4b = GlobalAveragePooling1D()(conv4b)
 
-    conv5a = conv5(emb1)
-    glob5a = GlobalAveragePooling1D()(conv5a)
-    conv5b = conv5(emb2)
-    glob5b = GlobalAveragePooling1D()(conv5b)
+    # conv5a = conv5(emb1)
+    # glob5a = GlobalAveragePooling1D()(conv5a)
+    # conv5b = conv5(emb2)
+    # glob5b = GlobalAveragePooling1D()(conv5b)
 
-    conv6a = conv6(emb1)
-    glob6a = GlobalAveragePooling1D()(conv6a)
-    conv6b = conv6(emb2)
-    glob6b = GlobalAveragePooling1D()(conv6b)
+    # conv6a = conv6(emb1)
+    # glob6a = GlobalAveragePooling1D()(conv6a)
+    # conv6b = conv6(emb2)
+    # glob6b = GlobalAveragePooling1D()(conv6b)
 
-    mergea = concatenate([glob1a, glob2a, glob3a, glob4a, glob5a,glob6a])
-    mergeb = concatenate([glob1b, glob2b, glob3b, glob4b, glob5b,glob6b])
+    mergea = concatenate([glob1a, glob2a, glob3a, glob4a,])# glob5a,glob6a])
+    mergeb = concatenate([glob1b, glob2b, glob3b, glob4b,])# glob5b,glob6b])
 
     # We take the explicit absolute difference between the two sentences
     # Furthermore we take the multiply different entries to get a different
@@ -115,7 +115,7 @@ def cnn_help(emb1,emb2):
 
  
     # merge = concatenate([mergea,mergeb,diff, mul,add])
-    cro=cross(mergea,mergeb)
+    cro=cross(mergea,mergeb,sum(nbfilters))
     merge = concatenate([mergea,mergeb,cro])
     return merge
 
@@ -128,7 +128,7 @@ def cnn_help2(emb1,emb2):
     conv1 = Conv1D(filters=nbfilters[0], kernel_size=2,
                    padding='same', activation='relu')
     
-   
+    
 
     # Run through CONV + GAP layers
     conv1a = conv1(emb1)
@@ -149,9 +149,9 @@ def cnn_help2(emb1,emb2):
     add  = Lambda(lambda x: x[0] + x[1],
                  output_shape=(sum(nbfilters),))([mergea, mergeb])
 
-    cro=cross(mergea,mergeb)
+    cro=cross(mergea,mergeb,sum(nbfilters))
     merge = concatenate([mergea,mergeb,cro])
-    return merge
+    return cro
 def model_conv1D_(lr=0.005):
 
  
@@ -179,23 +179,24 @@ def model_conv1D_(lr=0.005):
 
     
     magic_dense = BatchNormalization()(magic_input)
-    magic_dense = Dense(64, activation='elu')(magic_dense)
+    magic_dense = Dense(64, activation='relu')(magic_dense)
 
-    match_list_char = cnn_help2(emb1_char,emb2_char)
+    match_list_char = cnn_help(emb1_char,emb2_char)
     match_list_word = cnn_help2(emb1_word,emb2_word)
     merge = concatenate([match_list_char,match_list_word,magic_dense])
 
-    x = Dropout(0.2)(merge)
-    x = BatchNormalization()(x)
-    x = Dense(300, activation='relu')(x)
+    # x = Dropout(0.5)(merge)
+    # x = BatchNormalization()(x)
+    x = Dense(300, activation='relu')(merge)
 
-    x = Dropout(0.2)(x)
+
+    x = Dropout(0.5)(x)
     x = BatchNormalization()(x)
-    pred = Dense(2, activation='sigmoid')(x)
+    pred = Dense(1, activation='sigmoid')(x)
     #model = Model(inputs=[seq1_char, seq2_char, magic_input], outputs=pred)
     model = Model(inputs=[seq1_char, seq2_char,seq1_word,seq2_word, magic_input], outputs=pred)
     model.compile(loss='binary_crossentropy',
-                  optimizer=Adam(lr=lr), metrics=['acc'])
+                  optimizer=Adam(lr=lr),metrics = [Precision,Recall,F1,])
     model.summary()
     return model
 
@@ -258,6 +259,8 @@ def dssm(lstmsize=20):
     subc = Lambda(lambda x: K.abs(x))(Subtract()([v1c,v2c]))
     maximumc = Maximum()([Multiply()([v1c,v1c]),Multiply()([v2c,v2c])])
     sub2 = Lambda(lambda x: K.abs(x))(Subtract()([v1ls,v2ls]))
+    
+
     matchlist = Concatenate(axis=1)([mul,sub,mulc,subc,maximum,maximumc,sub2])
     matchlist = Dropout(0.05)(matchlist)
 

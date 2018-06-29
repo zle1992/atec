@@ -24,8 +24,9 @@ def cross(input_1, input_2, out_shape):
 
     add = Lambda(lambda x: x[0] + x[1],
                  output_shape=(out_shape,))([input_1, input_2])
-    maximum = Maximum()([Multiply()([input_1,input_1]),Multiply()([input_2,input_2])])
-    out_ = Concatenate()([mul, diff, add,maximum])
+    # maximum = Maximum()([Multiply()([input_1,input_1]),Multiply()([input_2,input_2])])
+    # minmum = Maximum()([-Multiply()([input_1,input_1]),-Multiply()([input_2,input_2])])
+    out_ = Concatenate()([mul, diff, add])
     return out_
 
 

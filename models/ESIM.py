@@ -299,7 +299,7 @@ def esim(pretrained_embedding=config.word_embed_weights,
 
    
     dense = Dropout(dense_dropout)(dense)
-    dense = Dense(dense_dim, activation='elu')(dense)
+    dense = Dense(dense_dim, activation='relu')(dense)
     dense = BatchNormalization()(dense)
     dense = Dropout(dense_dropout)(dense)
     out_ = Dense(2, activation='sigmoid')(dense)
