@@ -1,5 +1,7 @@
 # atec
+https://dc.cloud.alipay.com/index#/topic/intro?id=3
 
+16th/2632
 
 ## 0612 fix cv bugs offline 数据扩充5 cv  CNN :  0.63407952549263558
 ## 0.6155

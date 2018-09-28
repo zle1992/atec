@@ -135,6 +135,6 @@ train_featdires = ['data/feats0_train.csv',
                   'data/feats2_train.csv',
                   ]
 
-test_featdires = ['data/share/feats0_test.csv',
-                  'data/share/feats1_test.csv',
-                  'data/share/feats2_test.csv']
+test_featdires = ['data/feats0_test.csv',
+                  'data/feats1_test.csv',
+                  'data/feats2_test.csv']

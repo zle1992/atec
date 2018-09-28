@@ -12,6 +12,8 @@ import sys
 sys.path.append('utils/')
 import config
 sys.path.append('models/layers/')
+from help import *
+
 
 from MyPooling import MyMeanPool,MyMaxPool
 from MyEmbeding import  create_pretrained_embedding
@@ -252,9 +254,14 @@ def esim(pretrained_embedding=config.word_embed_weights,
     q1 = Input(name='q1', shape=(maxlen,))
     q2 = Input(name='q2', shape=(maxlen,))
 
+    q1_w = Input(name='q1_w', shape=(maxlen,))
+    q2_w = Input(name='q2_w', shape=(maxlen,))
+
     # Embedding
     emb_layer = create_pretrained_embedding(
-        config.word_embed_weight, mask_zero=False)
+        config.char_embed_weights, mask_zero=True)
+    emb_layer_word = create_pretrained_embedding(
+        config.word_embed_weights, mask_zero=True)
     
     # Encode
     encode = Sequential()
@@ -262,8 +269,20 @@ def esim(pretrained_embedding=config.word_embed_weights,
     encode.add(BatchNormalization(axis=2))
     encode.add(Bidirectional(LSTM(lstm_dim, return_sequences=True)))
     
+    encode2 = Sequential()
+    encode2.add(emb_layer_word)
+    encode2.add(BatchNormalization(axis=2))
+    encode2.add(Bidirectional(LSTM(lstm_dim, return_sequences=True)))
+
     q1_encoded = encode(q1)
     q2_encoded = encode(q2)
+
+    q1_w_encoded = encode2(q1_w)
+    q2_w_encoded = encode2(q2_w)
+
+   
+
+
 
     # Attention
     q1_aligned, q2_aligned = soft_attention_alignment(q1_encoded, q2_encoded)
@@ -287,26 +306,28 @@ def esim(pretrained_embedding=config.word_embed_weights,
 
     q1_rep = MyMaxPool(axis=1)(q1_compare)
     q2_rep = MyMaxPool(axis=1)(q2_compare)
+
+    q1_w_rep = MyMaxPool(axis=1)(q1_w_encoded)
+    q2_w_rep = MyMaxPool(axis=1)(q2_w_encoded)
     
     # Classifier
     cro = cross(q1_rep,q2_rep,lstm_dim*2)
     dist = distence(q1_rep,q2_rep)
+    dist2 = distence(q1_w_rep,q2_w_rep)
     #dense = cro
-    if config.nofeats:
-        dense = Concatenate()([q1_rep, q2_rep,cro,dist])
-    else:
-        dense = Concatenate()([q1_rep, q2_rep,cro,dist,magic_dense])
+   
+    dense = Concatenate()([q1_rep, q2_rep,cro,dist,dist2,magic_dense])
 
    
     dense = Dropout(dense_dropout)(dense)
     dense = Dense(dense_dim, activation='relu')(dense)
     dense = BatchNormalization()(dense)
     dense = Dropout(dense_dropout)(dense)
-    out_ = Dense(2, activation='sigmoid')(dense)
+    out_ = Dense(1, activation='sigmoid')(dense)
 
 
-    model = Model(inputs=[q1, q2,magic_input], outputs=out_)
-    model.compile(optimizer=Adam(),
-                  loss='binary_crossentropy', metrics=['accuracy'])
+    model = Model(inputs=[q1, q2,q1_w,q2_w,magic_input], outputs=out_)
+    model.compile(loss='binary_crossentropy',
+                  optimizer="adam", metrics = [Precision,Recall,F1,])
     model.summary()
     return model

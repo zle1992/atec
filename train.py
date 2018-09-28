@@ -68,6 +68,7 @@ def get_model(model_name):
         model = Siamese_CNN()
 
     if model_name == 'esim':
+        lr = 0.01
         model = esim()
 
     if model_name == 'dam':
@@ -121,13 +122,11 @@ def train_model(x_train, y_train, x_dev, y_dev, model, lr, bst_model_path):
     return model
 
 
-def make_train_cv_data(X_train, Y_train, Model, model_name, kfolds, lr):
+def make_train_cv_data(data, model_name, kfolds):
 
-    from keras.models import model_from_json
 
-    json_string = Model.to_json()
-
-    S_train = np.zeros((Y_train.shape[0], 1))
+    X_train, Y_train = get_X_Y_from_df(data, config.data_augment, config.shuffer)
+    S_train = np.zeros((Y_train.shape[0], 2))
 
     train_df = pd.DataFrame()
     train_df['pred'] = 0
@@ -149,19 +148,21 @@ def make_train_cv_data(X_train, Y_train, Model, model_name, kfolds, lr):
         x_dev = [X[i][test_index, :] for i in range(5)]
         y_train = Y[train_index]
         y_dev = Y[test_index]
+        id_dev = data.id.values[test_index]
         print('kf: ', k)
 
         model = train_model(x_train, y_train, x_dev, y_dev,
                             model, lr, bst_model_path)
         pred = model.predict(x_dev, batch_size=config.batch_size)
         pre, rec, f1 = score(y_dev, pred)
-        S_train[test_index] = pred
+        S_train[test_index,0] = id_dev
+        S_train[test_index,1] = [i[0] for i in pred]
         p.append(pre)
         r.append(rec)
         f.append(f1)
 
-    train_df['pred'] = [i[0] for i in S_train]
-
+    train_df['pred'] = S_train[:,1]
+    train_df['id'] =  S_train[:,0]
     print('p r f1 ')
     print(np.array([p, r, f, ]).T)
     print('mean :', np.mean(np.array(p)),
@@ -170,11 +171,8 @@ def make_train_cv_data(X_train, Y_train, Model, model_name, kfolds, lr):
                     index=False, )
 
 
-def do_train_cv(model_name, model, kfolds, lr):
-    data = load_data()
-    X_train, Y_train = get_X_Y_from_df(
-        data, config.data_augment, config.shuffer)
-    make_train_cv_data(X_train, Y_train, model, model_name, kfolds, lr)
+
+    
 
 
 def do_single_train(model_name, model, lr):
@@ -199,9 +197,8 @@ def do_train_cv(model_name, model, kfolds, lr):
 
 def cv(model_name):
     kfolds = 5
-    model, lr = get_model(model_name)
-    do_train_cv(model_name, model, kfolds, lr)
-
+    data = load_data()
+    make_train_cv_data(data, model_name, kfolds)
 
 def single_train(model_name):
     model, lr = get_model(model_name)

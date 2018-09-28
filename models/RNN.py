@@ -95,9 +95,9 @@ def Siamese_LSTM():
     # The embedding layer containing the word vectors
     # Embedding
     emb_layer = create_pretrained_embedding(
-        config.char_embed_weights, mask_zero=False)
+        config.char_embed_weights, mask_zero=True)
     emb_layer_word = create_pretrained_embedding(
-        config.word_embed_weights, mask_zero=False)
+        config.word_embed_weights, mask_zero=True)
     # Model variables
 
     n_hidden = 128
@@ -106,8 +106,8 @@ def Siamese_LSTM():
     x = Sequential()
     x.add(emb_layer)
     # # LSTM
-    x.add(Bidirectional(CuDNNLSTM(n_hidden,return_sequences=True)))
-    x.add(Bidirectional(CuDNNLSTM(n_hidden,return_sequences=True)))
+    x.add(Bidirectional(LSTM(n_hidden,return_sequences=True)))
+    x.add(Bidirectional(LSTM(n_hidden,return_sequences=True)))
     x.add(BatchNormalization())
     x.add(MyMaxPool(axis=1))
     shared_model = x
@@ -117,7 +117,7 @@ def Siamese_LSTM():
     x2 = Sequential()
     x2.add(emb_layer_word)
     # # LSTM
-    x2.add(Bidirectional(CuDNNLSTM(n_hidden,return_sequences=True)))
+    x2.add(Bidirectional(LSTM(10,return_sequences=True)))
     #x2.add(Bidirectional(LSTM(n_hidden,return_sequences=True)))
     x2.add(BatchNormalization())
     x2.add(MyMaxPool(axis=1))
