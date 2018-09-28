@@ -23,56 +23,21 @@ project
 |       └─── stack/ cv模型及中间数据
 │   
 └───model/
-    │  各种模型
-    │   
+|   │  各种模型
+|   │   
 └───feature/
-    │  提取的人工特征
-    │   
+|   │  提取的人工特征
+|   │   
 └───submit/
-    │  线下测试submit
-    │   
+|   │  线下测试submit
+|   │   
 └───util/
-    │  辅助文件
-    │   
+|   │  辅助文件，分词，训练词向量，拼音转换等
+|   │   
     
     
 ```
 
-
-data/
-词向量及一些中间文件。
-
-data/data/ 
-原始训练数据
-
-data/log_dir/
-log文件
-
-data/share
-线下训练与线上提交的公共文件
-
-data/share/jieba分词、停用词
-
-data/share/mv_w2v训练词向量
-
-data/share/pre_w2v外部词向量
-
-data/
-
-
-submit/
-测试数据 及 提交文件
-
-model/
-模型函数
-
-
-util/
-config.py  一些文件路径及参数
-cutword.py  :分词
-data2id.py  把词映射成id
-help.py 一些辅助函数，如划分训练验证。
-w2v.py  训练词向量
 
 
 
