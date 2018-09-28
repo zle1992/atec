@@ -1,6 +1,8 @@
 # atec蚂蚁金服NLP智能客服比赛  16th/2632
 https://dc.cloud.alipay.com/index#/topic/intro?id=3
 
+
+## 目录    
 ```
 project
 │   README.md
@@ -41,7 +43,9 @@ project
 
 
 
-运行流程：
+## 运行流程：    
+参数配置在util/config.py中
+
 
 python  util/w2v.py  
 训练词向量。（自动调用分词，data2id）
@@ -49,8 +53,6 @@ python  util/w2v.py
 python train.py cv  cnn1  
 对cnn1模型采用交叉验证。
 
-python submit.py  提交结果  
-模型选择及cv 记得修改main()函数
 
 
 
