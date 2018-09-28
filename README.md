@@ -6,18 +6,36 @@ project
 │   README.md
 │   file001.txt    
 │
-└───folder1
-│   │   file011.txt
-│   │   file012.txt
+└───data/ 词向量及一些中间文件
+│   │ 
+│   └───data/ 训练数据
 │   │
-│   └───subfolder1
-│       │   file111.txt
-│       │   file112.txt
-│       │   ...
+│   └───log_dir/ log文件
+│   │
+│   │
+│   └───share/  线下训练与线上提交的公共文件
+│       └─── jieba/ 分词、停用词
+|       |
+│       └─── mv_w2v/ 训练词向量
+|       |
+│       └─── single/ 单模型
+|       |
+|       └─── stack/ cv模型及中间数据
 │   
-└───folder2
-    │   file021.txt
-    │   file022.txt
+└───model/
+    │  各种模型
+    │   
+└───feature/
+    │  提取的人工特征
+    │   
+└───submit/
+    │  线下测试submit
+    │   
+└───util/
+    │  辅助文件
+    │   
+    
+    
 ```
 
 
@@ -33,14 +51,11 @@ log文件
 data/share
 线下训练与线上提交的公共文件
 
-data/share/jieba
-分词、停用词
+data/share/jieba分词、停用词
 
-data/share/mv_w2v
-训练词向量
+data/share/mv_w2v训练词向量
 
-data/share/pre_w2v
-外部词向量
+data/share/pre_w2v外部词向量
 
 data/
 
