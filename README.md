@@ -46,9 +46,8 @@ project
 ## 运行流程：    
 参数配置在util/config.py中
 
-
-python  util/w2v.py  
-训练词向量。（自动调用分词，data2id）
+python util/CutWord.py (首次运行时)
+python  util/w2v.py  (首次运行时)
 
 python train.py cv  cnn1  
 对cnn1模型采用交叉验证。
