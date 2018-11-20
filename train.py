@@ -24,7 +24,7 @@ from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceL
 sys.path.append('models')
 from CNN import model_conv1D_, ABCNN2, dssm
 from RNN import rnn_v1, Siamese_LSTM, my_rnn
-from ESIM import esim, decomposable_attention
+from ESIM import esim, decomposable_attention,BMA_GRU
 from ABCNN import ABCNN
 from bimpm import bimpm
 from MatchZoo import *
@@ -68,9 +68,21 @@ def get_model(model_name):
         model = Siamese_CNN()
 
     if model_name == 'esim':
-        lr = 0.01
+        lr = 0.001
         model = esim()
+    
+    if model_name == 'BMA_GRU-char-max':
+        lr = 0.001
+        model = BMA_GRU(mode="char",pool='max')
 
+    if model_name == 'BMA_GRU-char-mean':
+        lr = 0.001
+        model = BMA_GRU(mode="char",pool='mean')
+
+    if model_name == 'BMA_GRU-char-400d':
+        lr = 0.001
+        model = BMA_GRU(mode="char",pool='attention',lstm_dim=400)
+    
     if model_name == 'dam':
         model = decomposable_attention()
     if model_name == 'abcnn':
@@ -155,8 +167,8 @@ def make_train_cv_data(data, model_name, kfolds):
                             model, lr, bst_model_path)
         pred = model.predict(x_dev, batch_size=config.batch_size)
         pre, rec, f1 = score(y_dev, pred)
-        S_train[test_index,0] = id_dev
-        S_train[test_index,1] = [i[0] for i in pred]
+        # S_train[test_index,0] = id_dev
+        # S_train[test_index,1] = [i[0] for i in pred]
         p.append(pre)
         r.append(rec)
         f.append(f1)
@@ -167,8 +179,8 @@ def make_train_cv_data(data, model_name, kfolds):
     print(np.array([p, r, f, ]).T)
     print('mean :', np.mean(np.array(p)),
           np.mean(np.array(r)), np.mean(np.array(f)))
-    train_df.to_csv(config.stack_path + 'train_%s.csv' % (k),
-                    index=False, )
+    # train_df.to_csv(config.stack_path + 'train_%s.csv' % (k),
+    #                 index=False, )
 
 
 

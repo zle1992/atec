@@ -34,7 +34,7 @@ from MatchTensor import *
 from SpatialGRU import *
 from Match      import *
 from MyEmbeding import create_pretrained_embedding
-
+from help import *
 def drmm_tks(num_layer=4, hidden_sizes=[256,128,128,64],topk=20):
     emb_layer = create_pretrained_embedding(
         config.word_embed_weight, mask_zero=False)
@@ -120,9 +120,11 @@ def arc2(a1d_kernel_count=256,a1d_kernel_size=3,num_conv2d_layers=1,
         a2d_kernel_sizes=[[5,5],[5,5]],
         a2d_mpool_sizes=[[2,2],[2,2]]):
     emb_layer = create_pretrained_embedding(
-        config.word_embed_weight, mask_zero=False)
+        config.word_embed_weights, mask_zero=False)
     q1 = Input(shape=(config.word_maxlen,))
     q2 = Input(shape=(config.word_maxlen,))
+    q1_w = Input(shape=(config.word_maxlen,))
+    q2_w = Input(shape=(config.word_maxlen,))
     if len(config.feats) == 0:
         magic_input = Input(shape=(1,))
     else:
@@ -153,11 +155,11 @@ def arc2(a1d_kernel_count=256,a1d_kernel_size=3,num_conv2d_layers=1,
     pool1_flat_drop = Dropout(rate=0.5)(pool1_flat)
 
 
-    out_ = Dense(2, activation='softmax')(pool1_flat_drop)
+    out_ = Dense(1, activation='sigmoid')(pool1_flat_drop)
 
-    model = Model(inputs=[q1, q2, magic_input], outputs=out_)
+    model = Model(inputs=[q1, q2,q1_w,q2_w, magic_input], outputs=out_)
     model.compile(loss='binary_crossentropy',
-                  optimizer='adam', metrics=['acc'])
+                  optimizer='adam', metrics = [Precision,Recall,F1,])
     model.summary()
     return model
 
